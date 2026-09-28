@@ -1,4 +1,5 @@
 import type { RoomType } from "@/lib/api";
+import Money from "@/components/Money";
 
 export default function RoomTypeCard({ roomType }: { roomType: RoomType }) {
   return (
@@ -9,7 +10,7 @@ export default function RoomTypeCard({ roomType }: { roomType: RoomType }) {
         {roomType.capacity === 1 ? "huésped" : "huéspedes"}
       </p>
       <p className="text-blue-600 font-bold text-lg mb-3 dark:text-blue-400">
-        ${Number(roomType.base_rate).toLocaleString("es-AR")} / noche
+        <Money amountCOP={roomType.base_rate} /> / noche
       </p>
       {roomType.amenities && roomType.amenities.length > 0 && (
         <ul className="mb-4 flex flex-wrap gap-2">

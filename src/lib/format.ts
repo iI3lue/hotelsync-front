@@ -199,3 +199,63 @@ export function minRate(hotel: Hotel): number | null {
   if (rates.length === 0) return null;
   return Math.min(...rates);
 }
+
+/**
+ * Monedas soportadas por el selector del header. El backend guarda y cobra
+ * todo en COP (ver billing DEFAULT_CURRENCY); la conversion es SOLO visual.
+ */
+export const CURRENCIES = ["COP", "USD", "EUR"] as const;
+export type Currency = (typeof CURRENCIES)[number];
+export const DEFAULT_CURRENCY: Currency = "COP";
+
+/**
+ * Tasa de referencia COP por unidad (2026-09-28). Fija a proposito: la demo
+ * es determinista y no depende de un proveedor externo de cotizaciones.
+ * No es cotizacion en vivo.
+ */
+const COP_PER_UNIT: Record<Currency, number> = {
+  COP: 1,
+  USD: 4100,
+  EUR: 4450,
+};
+
+const moneyFormatters: Record<Currency, Intl.NumberFormat> = {
+  COP: new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0,
+  }),
+  USD: new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }),
+  EUR: new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 2,
+  }),
+};
+
+export function isCurrency(value: unknown): value is Currency {
+  return (
+    typeof value === "string" &&
+    (CURRENCIES as readonly string[]).includes(value)
+  );
+}
+
+/** Convierte un monto en COP a la moneda pedida (solo visual). */
+export function convertFromCOP(
+  amountCOP: number | string,
+  currency: Currency
+): number {
+  return Number(amountCOP) / COP_PER_UNIT[currency];
+}
+
+/** Formatea un monto en COP en la moneda pedida (solo visual). */
+export function formatMoney(
+  amountCOP: number | string,
+  currency: Currency
+): string {
+  return moneyFormatters[currency].format(convertFromCOP(amountCOP, currency));
+}

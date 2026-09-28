@@ -1,5 +1,6 @@
 import { fetchRoomTypes } from "@/lib/api";
 import RoomTypeForm from "@/components/RoomTypeForm";
+import Money from "@/components/Money";
 
 export default async function RoomTypesPage({
   params,
@@ -44,7 +45,7 @@ export default async function RoomTypesPage({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">{rt.capacity}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  ${Number(rt.base_rate).toLocaleString("es-AR")}
+                  <Money amountCOP={rt.base_rate} />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {rt.amenities?.join(", ") || "—"}
