@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+
+# production
+dist/
+build/
+
+# env (nunca commitear valores reales)
+.env
+.env.*
+!.env.example
+
+# misc
+*.tsbuildinfo
+coverage/
+.DS_Store

@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {  :root {
+    color-scheme: light;
+  }
+
+  ::selection {
+    background-color: #2563eb;
+    color: #ffffff;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  h1,
+  h2 {
+    text-wrap: balance;
+  }
+
+  a,
+  button,
+  input,
+  select {
+    touch-action: manipulation;
+  }
+
+  :focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Motion system (front-motion-pilot): transform/opacity only, 100-300ms. */
+@keyframes notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes check-draw {
+  from {
+    stroke-dashoffset: 48;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes day-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes notice-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer components {
+  .btn-press {
+    transition:
+      transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-press:active {
+    transform: scale(0.98);
+  }
+  .animate-notice-in {
+    animation: notice-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-check-draw {
+    stroke-dasharray: 48;
+    animation: check-draw 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-day-in {
+    animation: day-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-spin-slow {
+    animation: spin 800ms linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Opacity-only fallback: feedback stays legible, no spatial movement. */
+  .animate-notice-in,
+  .animate-day-in {
+    animation-name: notice-fade;
+    animation-duration: 150ms;
+  }
+  .animate-check-draw {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .btn-press:active {
+    transform: none;
+  }
+}
+
+/* Calendario de disponibilidad: días con stock en verde. */
+.cal-available:not(.rdp-day_selected) {
+  color: #15803d;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  animation: day-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.dark .cal-available:not(.rdp-day_selected) {
+  color: #4ade80;
+}
