@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BookingRef } from "@/lib/api";
-import { postJson, API_TIMEOUT_MS } from "@/lib/api-client";
+import {
+  postJson,
+  API_TIMEOUT_MS,
+  fetchAssignment,
+  fetchRoomStatus,
+} from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
 import HousekeepingStatus from "@/components/HousekeepingStatus";
 import InvoicePanel from "@/components/InvoicePanel";
@@ -26,6 +31,7 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
     bookingId: string;
     roomNumber: string;
   } | null>(null);
+  const [cleanRooms, setCleanRooms] = useState<string[]>([]);
   const roomNames = useRoomNames(hotelId);
 
   const load = useCallback(
@@ -42,6 +48,17 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
           throw new Error(err.message || `Error ${res.status}`);
         }
         setArrivals(await res.json());
+        // Habitaciones limpias para sugerir al asignar (solo lectura;
+        // si falla, el input manual sigue funcionando).
+        fetchRoomStatus(hotelId)
+          .then((rooms) =>
+            setCleanRooms(
+              rooms
+                .filter((r) => r.status === "clean")
+                .map((r) => r.room_number)
+            )
+          )
+          .catch(() => {});
       } catch (err) {
         setError(
           err instanceof Error &&
@@ -81,11 +98,24 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       void load(true);
     } catch (err) {
       const raw = err instanceof Error ? err.message : "No se pudo hacer el check-in";
-      setError(
-        /status pending/i.test(raw)
-          ? "Esa reserva está pendiente en Booking: confirmala primero en la pestaña “Reservas (auto)” y después hacé el check-in acá."
-          : raw
-      );
+      if (/status pending/i.test(raw)) {
+        setError(
+          "Esa reserva está pendiente en Booking: confirmala primero en la pestaña “Reservas (auto)” y después hacé el check-in acá."
+        );
+      } else if (/already checked in/i.test(raw)) {
+        // La reserva ya tiene habitación: mostrar cuál en vez del error crudo.
+        try {
+          const assignment = await fetchAssignment(bookingId);
+          setError(null);
+          setNotice(
+            `Esa reserva ya tiene la habitación ${assignment.physical_room_number} asignada.`
+          );
+        } catch {
+          setError(raw);
+        }
+      } else {
+        setError(raw);
+      }
       setBusy(null);
     }
   };
@@ -196,12 +226,20 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
                   id={`room-${b.booking_id}`}
                   type="text"
                   placeholder="Hab. física (ej. 101)"
+                  list={`clean-rooms-${b.booking_id}`}
                   value={rooms[b.booking_id] || ""}
                   onChange={(e) =>
                     setRooms((prev) => ({ ...prev, [b.booking_id]: e.target.value }))
                   }
                   className={`${inputClass} w-44`}
                 />
+                <datalist id={`clean-rooms-${b.booking_id}`}>
+                  {cleanRooms.map((roomNumber) => (
+                    <option key={roomNumber} value={roomNumber}>
+                      Hab. {roomNumber} (limpia)
+                    </option>
+                  ))}
+                </datalist>
                 <button
                   type="button"
                   onClick={() => handleCheckIn(b.booking_id)}

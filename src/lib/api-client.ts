@@ -1,6 +1,6 @@
 "use client";
 
-import type { Availability, Hotel, RoomType } from "./api";
+import type { Availability, Hotel, RoomAssignment, RoomType } from "./api";
 
 /**
  * Capa de acceso a datos para Client Components.
@@ -131,6 +131,15 @@ export async function blockInventory(data: {
   action: "block" | "unblock";
 }): Promise<Availability> {
   return clientPost<Availability>("/api/rate/blocks", data);
+}
+
+/** Asignación de habitación de una reserva (404 si no tiene check-in). */
+export async function fetchAssignment(
+  bookingId: string
+): Promise<RoomAssignment> {
+  return clientFetch<RoomAssignment>(
+    `/api/front-desk/check-in/${encodeURIComponent(bookingId)}`
+  );
 }
 
 /** POST genérico para acciones (check-in/out, confirm/cancel, etc.). */
