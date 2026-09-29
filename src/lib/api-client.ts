@@ -48,6 +48,12 @@ export async function fetchRoomTypes(hotelId: string): Promise<RoomType[]> {
   );
 }
 
+export async function fetchHotelByIdClient(hotelId: string): Promise<Hotel> {
+  return clientFetch<Hotel>(
+    `/api/property/hotels/${encodeURIComponent(hotelId)}`
+  );
+}
+
 export async function createHotel(data: {
   name: string;
   city: string;

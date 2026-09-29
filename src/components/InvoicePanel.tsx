@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { fetchFolioByBooking, type BillingFolio } from "@/lib/api-client";
+import {
+  fetchFolioByBooking,
+  fetchHotelByIdClient,
+  type BillingFolio,
+} from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import Money from "@/components/Money";
 import { useCurrency } from "@/components/CurrencyProvider";
@@ -97,6 +101,49 @@ export default function InvoicePanel({ bookingId }: { bookingId: string }) {
   if (!invoice) return null;
 
   return (
+    <InvoiceReady folio={folio} />
+  );
+}
+
+function InvoiceReady({ folio }: { folio: BillingFolio }) {
+  const invoice = folio.invoice;
+  if (!invoice) return null;
+  const { currency } = useCurrency();
+  const [hotelName, setHotelName] = useState<string>("HotelSync");
+  const [generating, setGenerating] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchHotelByIdClient(folio.hotel_id)
+      .then((hotel) => {
+        if (!cancelled) setHotelName(hotel.name);
+      })
+      .catch(() => {
+        // Sin nombre del hotel igual se genera el PDF.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [folio.hotel_id]);
+
+  const downloadPdf = async () => {
+    setGenerating(true);
+    setPdfError(null);
+    try {
+      const { buildInvoicePdf } = await import("@/lib/invoice-pdf");
+      const doc = buildInvoicePdf(folio, hotelName);
+      doc.save(`factura-${invoice.invoice_number}.pdf`);
+    } catch (err) {
+      setPdfError(
+        err instanceof Error ? err.message : "No se pudo generar el PDF"
+      );
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <h3 className="mb-1 text-lg font-semibold">
         Factura {invoice.invoice_number}
@@ -155,6 +202,24 @@ export default function InvoicePanel({ bookingId }: { bookingId: string }) {
           Montos de referencia en {currency}; la factura es en {invoice.currency}.
         </p>
       ) : null}
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => void downloadPdf()}
+          disabled={generating}
+          className="rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation disabled:opacity-50"
+        >
+          {generating ? "Generando PDF…" : "Descargar factura (PDF)"}
+        </button>
+        {pdfError ? (
+          <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+            {pdfError}
+          </p>
+        ) : null}
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          El PDF siempre sale en {invoice.currency}.
+        </p>
+      </div>
     </div>
   );
 }
