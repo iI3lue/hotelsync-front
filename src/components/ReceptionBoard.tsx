@@ -80,7 +80,12 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       setBusy(null);
       void load(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo hacer el check-in");
+      const raw = err instanceof Error ? err.message : "No se pudo hacer el check-in";
+      setError(
+        /status pending/i.test(raw)
+          ? "Esa reserva está pendiente en Booking: confirmala primero en la pestaña “Reservas (auto)” y después hacé el check-in acá."
+          : raw
+      );
       setBusy(null);
     }
   };
