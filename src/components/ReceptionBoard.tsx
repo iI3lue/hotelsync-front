@@ -32,6 +32,8 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
     roomNumber: string;
   } | null>(null);
   const [cleanRooms, setCleanRooms] = useState<string[]>([]);
+  const [hiddenArrivalIds, setHiddenArrivalIds] = useState<string[]>([]);
+  const [showHiddenArrivals, setShowHiddenArrivals] = useState(false);
   const roomNames = useRoomNames(hotelId);
 
   const load = useCallback(
@@ -78,6 +80,37 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Llegadas ocultas de la vista (solo local, nada se borra del backend).
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("hotelsync-hidden-arrivals");
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setHiddenArrivalIds(
+          parsed.filter((v): v is string => typeof v === "string")
+        );
+      }
+    } catch {
+      // Sin persistencia: la vista funciona igual en la sesión.
+    }
+  }, []);
+
+  const persistHiddenArrivals = (ids: string[]) => {
+    setHiddenArrivalIds(ids);
+    try {
+      window.localStorage.setItem(
+        "hotelsync-hidden-arrivals",
+        JSON.stringify(ids)
+      );
+    } catch {
+      // Sin persistencia igual funciona en la sesión.
+    }
+  };
+
+  const visibleArrivals = (arrivals ?? []).filter(
+    (b) => showHiddenArrivals || !hiddenArrivalIds.includes(b.booking_id)
+  );
 
   const handleCheckIn = async (bookingId: string) => {
     const room = (rooms[bookingId] || "").trim();
@@ -194,10 +227,12 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
         </div>
       ) : null}
 
-      {!arrivals || arrivals.length === 0 ? (
+      {!arrivals || visibleArrivals.length === 0 ? (
         <div className="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800">
           <p className="font-medium text-gray-700 dark:text-gray-200">
-            No hay llegadas confirmadas para esta fecha.
+            {showHiddenArrivals || hiddenArrivalIds.length === 0
+              ? "No hay llegadas confirmadas para esta fecha."
+              : "Todas las llegadas de esta fecha están ocultas."}
           </p>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Este tablero solo muestra confirmed del read model de Front Desk. Mirá la
@@ -210,14 +245,40 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
             >
               Reintentar
             </button>
+            {!showHiddenArrivals && hiddenArrivalIds.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowHiddenArrivals(true)}
+                className="mt-4 ml-2 rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
+              >
+                Mostrar ocultas ({hiddenArrivalIds.length})
+              </button>
+            ) : null}
         </div>
       ) : (
         <div>
           <p role="status" className="mb-3 text-sm text-gray-600 tabular-nums dark:text-gray-300">
-            {arrivals.length === 1 ? "1 llegada confirmada" : `${arrivals.length} llegadas confirmadas`}
+            {visibleArrivals.length === 1 ? "1 llegada confirmada" : `${visibleArrivals.length} llegadas confirmadas`}
+            {showHiddenArrivals ? (
+              <button
+                type="button"
+                onClick={() => setShowHiddenArrivals(false)}
+                className="ml-2 underline underline-offset-2"
+              >
+                Ocultar de nuevo
+              </button>
+            ) : hiddenArrivalIds.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowHiddenArrivals(true)}
+                className="ml-2 underline underline-offset-2"
+              >
+                Mostrar ocultas ({hiddenArrivalIds.length})
+              </button>
+            ) : null}
           </p>
         <ul className="space-y-4">
-          {arrivals.map((b) => (
+          {visibleArrivals.map((b) => (
             <li
               key={b.booking_id}
               className="rounded-lg bg-white p-4 shadow dark:bg-gray-800"
@@ -274,6 +335,30 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
                 >
                   Check-out
                 </button>
+                {showHiddenArrivals && hiddenArrivalIds.includes(b.booking_id) ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      persistHiddenArrivals(
+                        hiddenArrivalIds.filter((id) => id !== b.booking_id)
+                      )
+                    }
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Restaurar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    title="Quitar de la vista (solo local, no borra la llegada)"
+                    onClick={() =>
+                      persistHiddenArrivals([...hiddenArrivalIds, b.booking_id])
+                    }
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Quitar
+                  </button>
+                )}
               </div>
             </li>
           ))}
