@@ -103,3 +103,81 @@ export async function blockInventory(data: {
 export async function postJson<T>(url: string, body: unknown): Promise<T> {
   return clientPost<T>(url, body);
 }
+
+export interface BillingCharge {
+  charge_id: string;
+  concept: string;
+  amount: number | string;
+  category: string;
+  added_at: string;
+}
+
+export interface BillingInvoice {
+  invoice_id: string;
+  invoice_number: string;
+  subtotal: number | string;
+  tax_rate: number | string;
+  tax_amount: number | string;
+  total: number | string;
+  currency: string;
+  country: string;
+  issued_at: string;
+}
+
+export interface BillingFolio {
+  folio_id: string;
+  booking_id: string;
+  hotel_id: string;
+  guest_id: string;
+  currency: string;
+  total: number | string;
+  status: string;
+  charges: BillingCharge[];
+  invoice: BillingInvoice | null;
+}
+
+/** Folio de una reserva con cargos y factura (si ya cerró). */
+export async function fetchFolioByBooking(
+  bookingId: string
+): Promise<BillingFolio> {
+  return clientFetch<BillingFolio>(
+    `/api/billing/folios/by-booking/${encodeURIComponent(bookingId)}`
+  );
+}
+
+export interface HousekeepingRoomStatus {
+  room_status_id: string;
+  hotel_id: string;
+  room_number: string;
+  status: string;
+  assigned_to: string | null;
+  updated_at: string;
+}
+
+export interface HousekeepingTask {
+  history_id: string;
+  booking_id: string;
+  hotel_id: string;
+  room_number: string;
+  status: string;
+  assigned_to: string | null;
+  created_at: string;
+}
+
+/** Estado de habitaciones físicas de un hotel (HK-1). */
+export async function fetchRoomStatus(
+  hotelId: string
+): Promise<HousekeepingRoomStatus[]> {
+  return clientFetch<HousekeepingRoomStatus[]>(
+    `/api/housekeeping/rooms/status?hotel_id=${encodeURIComponent(hotelId)}`
+  );
+}
+
+/** Tareas de limpieza de un hotel (HK-2, HK-3). */
+export async function fetchCleaningTasks(
+  hotelId: string
+): Promise<HousekeepingTask[]> {
+  return clientFetch<HousekeepingTask[]>(
+    `/api/housekeeping/tasks?hotel_id=${encodeURIComponent(hotelId)}`
+  );
+}

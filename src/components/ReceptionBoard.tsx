@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { BookingRef } from "@/lib/api";
 import { postJson } from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
+import HousekeepingStatus from "@/components/HousekeepingStatus";
+import InvoicePanel from "@/components/InvoicePanel";
 
 interface ReceptionBoardProps {
   hotelId: string;
@@ -20,6 +22,10 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
   const [rooms, setRooms] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [lastCheckout, setLastCheckout] = useState<{
+    bookingId: string;
+    roomNumber: string;
+  } | null>(null);
   const roomNames = useRoomNames(hotelId);
 
   const load = useCallback(
@@ -76,9 +82,16 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
     setBusy(bookingId);
     setError(null);
     try {
-      await postJson("/api/front-desk/check-out", { booking_id: bookingId });
+      const assignment = await postJson<{
+        booking_id: string;
+        physical_room_number: string;
+      }>("/api/front-desk/check-out", { booking_id: bookingId });
       // Optimista: el aviso sale al instante; la lista se revalida en fondo.
       setNotice(`Check-out OK: reserva ${bookingId.slice(0, 8)}… (checkout.completed emitido)`);
+      setLastCheckout({
+        bookingId,
+        roomNumber: assignment.physical_room_number,
+      });
       setBusy(null);
       void load(true);
     } catch (err) {
@@ -109,6 +122,17 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
           </p>
         ) : null}
       </div>
+
+      {lastCheckout ? (
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <InvoicePanel bookingId={lastCheckout.bookingId} />
+          <HousekeepingStatus
+            hotelId={hotelId}
+            roomNumber={lastCheckout.roomNumber}
+            bookingId={lastCheckout.bookingId}
+          />
+        </div>
+      ) : null}
 
       {!arrivals || arrivals.length === 0 ? (
         <div className="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800">
