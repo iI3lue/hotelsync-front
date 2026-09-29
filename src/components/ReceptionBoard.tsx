@@ -137,7 +137,25 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       setBusy(null);
       void load(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo hacer el check-out");
+      const raw =
+        err instanceof Error ? err.message : "No se pudo hacer el check-out";
+      if (/already checked out/i.test(raw)) {
+        // La estadía ya está cerrada: mostrar cuándo en vez del error crudo.
+        try {
+          const assignment = await fetchAssignment(bookingId);
+          const when = assignment.checked_out_at
+            ? String(assignment.checked_out_at).slice(0, 16).replace("T", " ")
+            : null;
+          setError(null);
+          setNotice(
+            `Esa reserva ya hizo check-out${when ? ` el ${when}` : ""} en la habitación ${assignment.physical_room_number}. No hay nada por cerrar.`
+          );
+        } catch {
+          setError(raw);
+        }
+      } else {
+        setError(raw);
+      }
       setBusy(null);
     }
   };
