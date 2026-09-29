@@ -99,7 +99,7 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
         physical_room_number: string;
       }>("/api/front-desk/check-out", { booking_id: bookingId });
       // Optimista: el aviso sale al instante; la lista se revalida en fondo.
-      setNotice(`Check-out OK: reserva ${bookingId.slice(0, 8)}… (checkout.completed emitido)`);
+      setNotice(`Check-out OK: reserva ${bookingId.slice(0, 8)}… salió de la lista de llegadas (checkout.completed emitido)`);
       setLastCheckout({
         bookingId,
         roomNumber: assignment.physical_room_number,
