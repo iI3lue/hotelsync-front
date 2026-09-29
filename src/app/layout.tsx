@@ -4,6 +4,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import ThemeToggle from "@/components/ThemeToggle";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
 import CurrencySelector from "@/components/CurrencySelector";
+import WarmUp from "@/components/WarmUp";
 
 const PROPERTY_API =
   process.env.NEXT_PUBLIC_PROPERTY_API_URL || "http://localhost:3001";
@@ -42,6 +43,7 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <CurrencyProvider>
+          <WarmUp />
           <header className="bg-white shadow-sm dark:bg-gray-800">
             <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
               <a
