@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BookingRef } from "@/lib/api";
-import { postJson } from "@/lib/api-client";
+import { postJson, API_TIMEOUT_MS } from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
 import HousekeepingStatus from "@/components/HousekeepingStatus";
 import InvoicePanel from "@/components/InvoicePanel";
@@ -35,7 +35,7 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       try {
         const res = await fetch(
           `/api/front-desk/arrivals?hotel_id=${encodeURIComponent(hotelId)}&date=${encodeURIComponent(date)}`,
-          { signal: AbortSignal.timeout(3000) }
+          { signal: AbortSignal.timeout(API_TIMEOUT_MS) }
         );
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -43,7 +43,14 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
         }
         setArrivals(await res.json());
       } catch (err) {
-        setError(err instanceof Error ? err.message : "No se pudieron cargar las llegadas");
+        setError(
+          err instanceof Error &&
+            (err.name === "TimeoutError" || /timed out|timeout/i.test(err.message))
+            ? "El servicio está despertando (plan gratuito con sleep). Esperá un minuto y reintentá."
+            : err instanceof Error
+              ? err.message
+              : "No se pudieron cargar las llegadas"
+        );
       } finally {
         if (!silent) setLoading(false);
       }

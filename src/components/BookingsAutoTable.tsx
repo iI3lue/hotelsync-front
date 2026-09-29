@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import type { BookingRef } from "@/lib/api";
-import { postJson } from "@/lib/api-client";
+import { postJson, API_TIMEOUT_MS } from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
 
 interface BookingsAutoTableProps {
@@ -29,7 +29,7 @@ async function fetchBookings(
   const params = new URLSearchParams({ hotel_id: hotelId, date });
   if (status !== "all") params.set("status", status);
   const res = await fetch(`/api/booking/bookings?${params.toString()}`, {
-    signal: AbortSignal.timeout(3000),
+    signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -61,7 +61,13 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
       revalidateOnFocus: false,
     }
   );
-  const error = swrError instanceof Error ? swrError.message : null;
+  const rawError = swrError instanceof Error ? swrError.message : null;
+  const error =
+    rawError &&
+    (swrError instanceof Error &&
+    (swrError.name === "TimeoutError" || /timed out|timeout/i.test(rawError))
+      ? "El servicio está despertando (plan gratuito con sleep). Esperá un minuto y reintentá."
+      : rawError);
 
   useEffect(() => {
     if (bookings) setUpdatedAt(new Date().toLocaleTimeString("es-CO"));

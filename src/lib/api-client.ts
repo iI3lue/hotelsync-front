@@ -11,31 +11,59 @@ import type { Availability, Hotel, RoomType } from "./api";
  * (documento de arquitectura §6.5).
  */
 
-async function clientFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { message?: string }).message || `Error ${res.status}`
-    );
+/**
+ * Timeout por llamada. 30s en vez de 3s: en plan gratuito los backends
+ * duermen (sleep) y el primer request los despierta (cold start ~60s).
+ * El timeout sigue protegiendo contra cuelgues, pero no mata el wake-up.
+ * Los POST no se reintentan (no idempotentes); los GET los reintenta el usuario.
+ */
+export const API_TIMEOUT_MS = 30000;
+
+function friendlyError(err: unknown, fallback: string): Error {
+  if (err instanceof Error) {
+    if (err.name === "TimeoutError" || /timed out|timeout/i.test(err.message)) {
+      return new Error(
+        "El servicio está despertando (plan gratuito con sleep). Esperá un minuto y reintentá."
+      );
+    }
+    return err;
   }
-  return res.json() as Promise<T>;
+  return new Error(fallback);
+}
+
+async function clientFetch<T>(url: string): Promise<T> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(
+        (err as { message?: string }).message || `Error ${res.status}`
+      );
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    throw friendlyError(err, "Error de red");
+  }
 }
 
 export async function clientPost<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(3000),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(
-      (err as { message?: string }).message || `Error ${res.status}`
-    );
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(
+        (err as { message?: string }).message || `Error ${res.status}`
+      );
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    throw friendlyError(err, "Error de red");
   }
-  return res.json() as Promise<T>;
 }
 
 export async function fetchHotels(): Promise<Hotel[]> {
