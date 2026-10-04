@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import BookingForm from "@/components/BookingForm";
 import AvailabilityForm from "@/components/AvailabilityForm";
-import { fetchHotelById, fetchRoomTypes } from "@/lib/api";
+import {
+  fetchHotelById,
+  fetchRoomTypes,
+  withSearch,
+  type SearchState,
+} from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Nueva reserva en HotelSync",
@@ -12,10 +17,25 @@ export const metadata: Metadata = {
 export default async function NuevaReservaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ hotel?: string; room_type_id?: string; date?: string }>;
+  searchParams: Promise<SearchState>;
 }) {
-  const { hotel, room_type_id, date } = await searchParams;
-  const ready = Boolean(hotel && room_type_id && date);
+  const state = await searchParams;
+  const { hotel, room_type_id, date } = state;
+
+  const search: SearchState = {
+    city: state.city,
+    from: state.from,
+    to: state.to,
+    guests: state.guests,
+    amenity: state.amenity,
+    minCap: state.minCap,
+    sort: state.sort,
+    hotel: state.hotel,
+    room_type_id: state.room_type_id,
+    date: state.date,
+  };
+
+  const ready = Boolean(hotel && room_type_id);
 
   const [hotelData, roomTypes] = hotel
     ? await Promise.all([
@@ -38,7 +58,9 @@ export default async function NuevaReservaPage({
           hotelId={hotel!}
           hotelName={hotelData?.name ?? "Tu hotel"}
           roomType={roomType}
-          date={date!}
+          date={date ?? ""}
+          initialFrom={state.from}
+          initialTo={state.to}
         />
       ) : hotel ? (
         <AvailabilityForm
@@ -46,22 +68,26 @@ export default async function NuevaReservaPage({
           roomTypes={roomTypes}
           initialRoomTypeId={room_type_id ?? ""}
           initialDate={date ?? ""}
+          search={search}
         />
       ) : (
         <div
           role="status"
-          className="rounded-lg bg-white p-6 shadow-md dark:bg-gray-800"
+          className="rounded-lg bg-white p-8 text-center shadow-md dark:bg-gray-800"
         >
-          <p className="text-gray-600 dark:text-gray-300">
-            Falta el hotel. Empezá eligiendo disponibilidad desde el{" "}
-            <a
-              href="/"
-              className="text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
-            >
-              listado de hoteles
-            </a>
-            .
+          <h2 className="mb-2 text-xl font-semibold text-balance">
+            Todavía no elegiste un hotel
+          </h2>
+          <p className="mx-auto mb-6 max-w-md break-words text-gray-600 dark:text-gray-300">
+            Para reservar necesitás elegir primero el hotel, el tipo de
+            habitación y las fechas de tu estancia.
           </p>
+          <a
+            href={withSearch("/buscar", search)}
+            className="inline-block rounded bg-blue-600 px-5 py-2.5 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
+          >
+            Buscar hoteles
+          </a>
         </div>
       )}
     </div>

@@ -1,3 +1,5 @@
+import AdminAuthLink from "@/components/AdminAuthLink";
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const linkClass =
     "rounded px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-200 dark:hover:text-blue-400";
@@ -19,9 +21,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <a href="/admin/recepcion" className={linkClass}>
           Recepción
         </a>
-        <a href="/" className={`${linkClass} ml-auto`}>
+        <a href="/admin/housekeeping" className={linkClass}>
+          Limpieza
+        </a>
+        <a href="/" className={linkClass}>
           ← Volver al sitio
         </a>
+        <AdminAuthLink linkClass={linkClass} />
       </nav>
       {children}
       <p className="mt-8 text-xs text-gray-500 dark:text-gray-400">

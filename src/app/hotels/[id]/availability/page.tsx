@@ -1,4 +1,10 @@
-import { fetchAvailability, fetchHotelById, fetchRoomTypes } from "@/lib/api";
+import {
+  fetchAvailability,
+  fetchHotelById,
+  fetchRoomTypes,
+  withSearch,
+  type SearchState,
+} from "@/lib/api";
 import AvailabilityForm from "@/components/AvailabilityForm";
 import Breadcrumbs from "@/components/Breadcrumbs";
 
@@ -7,10 +13,23 @@ export default async function AvailabilityPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ room_type_id?: string; date?: string }>;
+  searchParams: Promise<SearchState>;
 }) {
   const { id } = await params;
-  const { room_type_id, date } = await searchParams;
+  const state = await searchParams;
+  const { room_type_id, date } = state;
+
+  const search: SearchState = {
+    city: state.city,
+    from: state.from,
+    to: state.to,
+    guests: state.guests,
+    amenity: state.amenity,
+    minCap: state.minCap,
+    sort: state.sort,
+    room_type_id: state.room_type_id,
+    date: state.date,
+  };
 
   // Paralelo: hotel + habitaciones a la vez (async-parallel).
   const [hotel, roomTypes] = await Promise.all([
@@ -31,7 +50,10 @@ export default async function AvailabilityPage({
     <div>
       <Breadcrumbs
         items={[
-          { label: hotel?.name ?? "Hotel", href: `/hotels/${id}` },
+          {
+            label: hotel?.name ?? "Hotel",
+            href: withSearch(`/hotels/${id}`, search),
+          },
           { label: "Disponibilidad" },
         ]}
       />
@@ -53,6 +75,7 @@ export default async function AvailabilityPage({
         initialRoomTypeId={room_type_id ?? ""}
         initialDate={date ?? ""}
         initialAvailability={availability}
+        search={search}
       />
     </div>
   );

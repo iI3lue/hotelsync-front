@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import type { BookingRef } from "@/lib/api";
-import { postJson, API_TIMEOUT_MS } from "@/lib/api-client";
+import { postJson } from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
 
 interface BookingsAutoTableProps {
@@ -29,7 +29,7 @@ async function fetchBookings(
   const params = new URLSearchParams({ hotel_id: hotelId, date });
   if (status !== "all") params.set("status", status);
   const res = await fetch(`/api/booking/bookings?${params.toString()}`, {
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: AbortSignal.timeout(3000),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -43,8 +43,6 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
-  const [hiddenIds, setHiddenIds] = useState<string[]>([]);
-  const [showHidden, setShowHidden] = useState(false);
   const roomNames = useRoomNames(hotelId);
 
   const {
@@ -63,44 +61,11 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
       revalidateOnFocus: false,
     }
   );
-  const rawError = swrError instanceof Error ? swrError.message : null;
-  const error =
-    rawError &&
-    (swrError instanceof Error &&
-    (swrError.name === "TimeoutError" || /timed out|timeout/i.test(rawError))
-      ? "El servicio está despertando (plan gratuito con sleep). Esperá un minuto y reintentá."
-      : rawError);
+  const error = swrError instanceof Error ? swrError.message : null;
 
   useEffect(() => {
     if (bookings) setUpdatedAt(new Date().toLocaleTimeString("es-CO"));
   }, [bookings]);
-
-  // Ocultado local por fila (solo vista, nada se borra del backend).
-  // Persiste en localStorage; lectura en efecto para no romper SSR.
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("hotelsync-hidden-bookings");
-      const parsed: unknown = raw ? JSON.parse(raw) : [];
-      if (Array.isArray(parsed)) {
-        setHiddenIds(parsed.filter((v): v is string => typeof v === "string"));
-      }
-    } catch {
-      // Sin persistencia: la vista funciona igual en la sesión.
-    }
-  }, []);
-
-  const persistHidden = (ids: string[]) => {
-    setHiddenIds(ids);
-    try {
-      window.localStorage.setItem("hotelsync-hidden-bookings", JSON.stringify(ids));
-    } catch {
-      // Sin persistencia igual funciona en la sesión.
-    }
-  };
-
-  const visibleBookings = (bookings ?? []).filter(
-    (b) => showHidden || !hiddenIds.includes(b.booking_id)
-  );
 
   const handleTransition = async (bookingId: string, action: "confirm" | "cancel") => {
     setBusy(bookingId);
@@ -191,47 +156,17 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
         </p>
       ) : null}
 
-      {!bookings || visibleBookings.length === 0 ? (
+      {!bookings || bookings.length === 0 ? (
         <div className="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800">
-          <p className="font-medium text-gray-700 dark:text-gray-200">
-            {showHidden || hiddenIds.length === 0
-              ? "No hay reservas para este filtro."
-              : "Todas las reservas de este filtro están ocultas."}
-          </p>
+          <p className="font-medium text-gray-700 dark:text-gray-200">No hay reservas para este filtro.</p>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Creá una desde la web y aparece sola acá sin consultar manual.
           </p>
-          {!showHidden && hiddenIds.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setShowHidden(true)}
-              className="mt-4 rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
-            >
-              Mostrar ocultas ({hiddenIds.length})
-            </button>
-          ) : null}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg bg-white shadow dark:bg-gray-800">
           <p role="status" className="px-4 pt-3 text-sm text-gray-600 tabular-nums dark:text-gray-300">
-            {visibleBookings.length === 1 ? "1 reserva" : `${visibleBookings.length} reservas`}
-            {showHidden ? (
-              <button
-                type="button"
-                onClick={() => setShowHidden(false)}
-                className="ml-2 underline underline-offset-2"
-              >
-                Ocultar de nuevo
-              </button>
-            ) : hiddenIds.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => setShowHidden(true)}
-                className="ml-2 underline underline-offset-2"
-              >
-                Mostrar ocultas ({hiddenIds.length})
-              </button>
-            ) : null}
+            {bookings.length === 1 ? "1 reserva" : `${bookings.length} reservas`}
           </p>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -245,7 +180,7 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {visibleBookings.map((b) => (
+              {bookings.map((b) => (
                 <tr key={b.booking_id}>
                   <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">{b.booking_id.slice(0, 8)}…</td>
                   <td className="whitespace-nowrap px-4 py-2">{roomNames[b.room_type_id] ?? "—"}</td>
@@ -257,49 +192,27 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">{b.channel}</td>
                   <td className="whitespace-nowrap px-4 py-2">
-                    {showHidden && hiddenIds.includes(b.booking_id) ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          persistHidden(hiddenIds.filter((id) => id !== b.booking_id))
-                        }
-                        className="rounded border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
-                      >
-                        Restaurar
-                      </button>
-                    ) : (
+                    {b.status === "pending" ? (
                       <span className="inline-flex gap-1">
-                        {b.status === "pending" ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={busy === b.booking_id}
-                              onClick={() => void handleTransition(b.booking_id, "confirm")}
-                              className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                            >
-                              Confirmar
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy === b.booking_id}
-                              onClick={() => void handleTransition(b.booking_id, "cancel")}
-                              className="rounded border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
-                            >
-                              Cancelar
-                            </button>
-                          </>
-                        ) : null}
                         <button
                           type="button"
-                          title="Quitar de la vista (solo local, no borra la reserva)"
-                          onClick={() =>
-                            persistHidden([...hiddenIds, b.booking_id])
-                          }
+                          disabled={busy === b.booking_id}
+                          onClick={() => void handleTransition(b.booking_id, "confirm")}
+                          className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          Confirmar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busy === b.booking_id}
+                          onClick={() => void handleTransition(b.booking_id, "cancel")}
                           className="rounded border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
                         >
-                          Quitar
+                          Cancelar
                         </button>
                       </span>
+                    ) : (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">—</span>
                     )}
                   </td>
                 </tr>

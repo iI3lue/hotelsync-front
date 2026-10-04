@@ -1,6 +1,7 @@
 "use client";
 
-import type { Availability, Hotel, RoomAssignment, RoomType } from "./api";
+import type { Availability, Hotel, PhysicalRoom, RoomType } from "./api";
+import { authHeader } from "./auth-client";
 
 /**
  * Capa de acceso a datos para Client Components.
@@ -8,62 +9,37 @@ import type { Availability, Hotel, RoomAssignment, RoomType } from "./api";
  * A diferencia de `@/lib/api` (server-only: URLs directas al backend +
  * `cache` de React), estas funciones pegan a los rewrites `/api/*` de
  * Next (mismo origen, sin CORS) y aplican timeout de 3s por llamada
- * (documento de arquitectura §6.5).
+ * (documento de arquitectura §6.5). Si hay sesión, se adjunta el Bearer.
  */
-
-/**
- * Timeout por llamada. 30s en vez de 3s: en plan gratuito los backends
- * duermen (sleep) y el primer request los despierta (cold start ~60s).
- * El timeout sigue protegiendo contra cuelgues, pero no mata el wake-up.
- * Los POST no se reintentan (no idempotentes); los GET los reintenta el usuario.
- */
-export const API_TIMEOUT_MS = 30000;
-
-function friendlyError(err: unknown, fallback: string): Error {
-  if (err instanceof Error) {
-    if (err.name === "TimeoutError" || /timed out|timeout/i.test(err.message)) {
-      return new Error(
-        "El servicio está despertando (plan gratuito con sleep). Esperá un minuto y reintentá."
-      );
-    }
-    return err;
-  }
-  return new Error(fallback);
-}
 
 async function clientFetch<T>(url: string): Promise<T> {
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { message?: string }).message || `Error ${res.status}`
-      );
-    }
-    return res.json() as Promise<T>;
-  } catch (err) {
-    throw friendlyError(err, "Error de red");
+  const res = await fetch(url, {
+    headers: { ...authHeader() },
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { message?: string }).message || `Error ${res.status}`
+    );
   }
+  return res.json() as Promise<T>;
 }
 
 export async function clientPost<T>(url: string, body: unknown): Promise<T> {
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(API_TIMEOUT_MS),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(
-        (err as { message?: string }).message || `Error ${res.status}`
-      );
-    }
-    return res.json() as Promise<T>;
-  } catch (err) {
-    throw friendlyError(err, "Error de red");
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { message?: string }).message || `Error ${res.status}`
+    );
   }
+  return res.json() as Promise<T>;
 }
 
 export async function fetchHotels(): Promise<Hotel[]> {
@@ -73,12 +49,6 @@ export async function fetchHotels(): Promise<Hotel[]> {
 export async function fetchRoomTypes(hotelId: string): Promise<RoomType[]> {
   return clientFetch<RoomType[]>(
     `/api/property/hotels/${encodeURIComponent(hotelId)}/room-types`
-  );
-}
-
-export async function fetchHotelByIdClient(hotelId: string): Promise<Hotel> {
-  return clientFetch<Hotel>(
-    `/api/property/hotels/${encodeURIComponent(hotelId)}`
   );
 }
 
@@ -99,6 +69,93 @@ export async function createRoomType(data: {
   amenities: string[];
 }): Promise<RoomType> {
   return clientPost<RoomType>("/api/property/room-types", data);
+}
+
+export async function fetchMyBookings(): Promise<import("./api").Booking[]> {
+  return clientFetch<import("./api").Booking[]>("/api/booking/bookings/me");
+}
+
+export async function fetchPhysicalRooms(
+  hotelId: string
+): Promise<PhysicalRoom[]> {
+  return clientFetch<PhysicalRoom[]>(
+    `/api/property/hotels/${encodeURIComponent(hotelId)}/rooms`
+  );
+}
+
+export interface CleaningTask {
+  history_id: string;
+  room_status_id: string;
+  booking_id: string;
+  hotel_id: string;
+  physical_room_id?: string | null;
+  room_number: string;
+  status: string;
+  assigned_to?: string | null;
+  assigned_to_user_id?: string | null;
+  created_at: string;
+}
+
+export async function fetchMyTasks(status?: string): Promise<CleaningTask[]> {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return clientFetch<CleaningTask[]>(`/api/housekeeping/tasks/mine${query}`);
+}
+
+export async function fetchHotelTasks(
+  hotelId: string,
+  status?: string
+): Promise<CleaningTask[]> {
+  const params = new URLSearchParams({ hotel_id: hotelId });
+  if (status) params.set("status", status);
+  return clientFetch<CleaningTask[]>(`/api/housekeeping/tasks?${params}`);
+}
+
+export async function assignCleaningTask(
+  taskId: string,
+  assignedToUserId: string
+): Promise<CleaningTask> {
+  return clientPost<CleaningTask>(`/api/housekeeping/tasks/${taskId}/assign`, {
+    assigned_to_user_id: assignedToUserId,
+  });
+}
+
+async function putJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeader() },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(3000),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { message?: string }).message || `Error ${res.status}`
+    );
+  }
+  return res.json() as Promise<T>;
+}
+
+export async function transitionCleaningTask(
+  taskId: string,
+  action: "start" | "complete"
+): Promise<CleaningTask> {
+  return putJson<CleaningTask>(`/api/housekeeping/tasks/${taskId}/${action}`, {});
+}
+
+export async function createPhysicalRoom(data: {
+  hotel_id: string;
+  room_type_id: string;
+  room_number: string;
+  available_from: string;
+}): Promise<PhysicalRoom> {
+  return clientPost<PhysicalRoom>(
+    `/api/property/hotels/${encodeURIComponent(data.hotel_id)}/rooms`,
+    {
+      room_type_id: data.room_type_id,
+      room_number: data.room_number,
+      available_from: data.available_from,
+    }
+  );
 }
 
 export async function fetchAvailability(
@@ -133,94 +190,7 @@ export async function blockInventory(data: {
   return clientPost<Availability>("/api/rate/blocks", data);
 }
 
-/** Asignación de habitación de una reserva (404 si no tiene check-in). */
-export async function fetchAssignment(
-  bookingId: string
-): Promise<RoomAssignment> {
-  return clientFetch<RoomAssignment>(
-    `/api/front-desk/check-in/${encodeURIComponent(bookingId)}`
-  );
-}
-
 /** POST genérico para acciones (check-in/out, confirm/cancel, etc.). */
 export async function postJson<T>(url: string, body: unknown): Promise<T> {
   return clientPost<T>(url, body);
-}
-
-export interface BillingCharge {
-  charge_id: string;
-  concept: string;
-  amount: number | string;
-  category: string;
-  added_at: string;
-}
-
-export interface BillingInvoice {
-  invoice_id: string;
-  invoice_number: string;
-  subtotal: number | string;
-  tax_rate: number | string;
-  tax_amount: number | string;
-  total: number | string;
-  currency: string;
-  country: string;
-  issued_at: string;
-}
-
-export interface BillingFolio {
-  folio_id: string;
-  booking_id: string;
-  hotel_id: string;
-  guest_id: string;
-  currency: string;
-  total: number | string;
-  status: string;
-  charges: BillingCharge[];
-  invoice: BillingInvoice | null;
-}
-
-/** Folio de una reserva con cargos y factura (si ya cerró). */
-export async function fetchFolioByBooking(
-  bookingId: string
-): Promise<BillingFolio> {
-  return clientFetch<BillingFolio>(
-    `/api/billing/folios/by-booking/${encodeURIComponent(bookingId)}`
-  );
-}
-
-export interface HousekeepingRoomStatus {
-  room_status_id: string;
-  hotel_id: string;
-  room_number: string;
-  status: string;
-  assigned_to: string | null;
-  updated_at: string;
-}
-
-export interface HousekeepingTask {
-  history_id: string;
-  booking_id: string;
-  hotel_id: string;
-  room_number: string;
-  status: string;
-  assigned_to: string | null;
-  created_at: string;
-}
-
-/** Estado de habitaciones físicas de un hotel (HK-1). */
-export async function fetchRoomStatus(
-  hotelId: string
-): Promise<HousekeepingRoomStatus[]> {
-  return clientFetch<HousekeepingRoomStatus[]>(
-    `/api/housekeeping/rooms/status?hotel_id=${encodeURIComponent(hotelId)}`
-  );
-}
-
-/** Tareas de limpieza de un hotel (HK-2, HK-3). */
-export async function fetchCleaningTasks(
-  hotelId: string
-): Promise<HousekeepingTask[]> {
-  return clientFetch<HousekeepingTask[]>(
-    `/api/housekeeping/tasks?hotel_id=${encodeURIComponent(hotelId)}`
-  );
 }

@@ -51,18 +51,20 @@ export default async function HomePage({
   const { city } = await searchParams;
   return (
     <div>
-      <section aria-labelledby="hero-title" className="mb-8">
-        <h1
-          id="hero-title"
-          className="mb-2 text-balance text-3xl font-bold md:text-4xl"
-        >
-          Encontrá tu estadía perfecta
-        </h1>
-        <p className="mb-6 max-w-2xl break-words text-gray-600 dark:text-gray-300">
-          Buscá por destino, elegí fechas y compará hoteles de toda la cadena en
-          un solo lugar.
-        </p>
-        <SearchBar initialCity={city ?? ""} />
+      <section aria-labelledby="hero-title" className="mb-12">
+        <div className="animate-hero-in overflow-hidden rounded-3xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-950 px-6 py-12 shadow-2xl sm:px-12 sm:py-16">
+          <h1
+            id="hero-title"
+            className="max-w-3xl text-balance text-4xl font-bold leading-[1.05] tracking-tight text-white md:text-6xl"
+          >
+            Encontrá tu estadía perfecta
+          </h1>
+          <p className="mt-5 mb-8 max-w-xl break-words text-lg leading-relaxed text-blue-100/85">
+            Buscá por destino, elegí fechas y compará hoteles de toda la cadena
+            en un solo lugar.
+          </p>
+          <SearchBar initialCity={city ?? ""} />
+        </div>
       </section>
 
       <section aria-labelledby="listing-title">

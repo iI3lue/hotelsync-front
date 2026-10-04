@@ -1,20 +1,24 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { fetchHotels, filterHotels, minRate, rankHotelsByRelevance, suggestHotel } from "@/lib/api";
+import {
+  applyStayAvailability,
+  buildStockLookup,
+  fetchHotels,
+  filterHotels,
+  minRate,
+  rankHotelsByRelevance,
+  stayNights,
+  suggestHotel,
+  withSearch,
+  type SearchState,
+  type StayAvailability,
+} from "@/lib/api";
 import EmptyState from "@/components/EmptyState";
 import HotelCard from "@/components/HotelCard";
 import SearchBar from "@/components/SearchBar";
 import { SkeletonGrid } from "@/components/SkeletonCard";
 
-interface BuscarParams {
-  city?: string;
-  from?: string;
-  to?: string;
-  guests?: string;
-  amenity?: string;
-  minCap?: string;
-  sort?: string;
-}
+type BuscarParams = SearchState;
 
 export async function generateMetadata({
   searchParams,
@@ -31,27 +35,40 @@ export async function generateMetadata({
   };
 }
 
-function toggleAmenityUrl(params: BuscarParams, amenity: string): string {
-  const next = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value && key !== "amenity") next.set(key, value);
-  }
-  if (params.amenity?.toLowerCase() !== amenity) next.set("amenity", amenity);
-  const query = next.toString();
-  return query ? `/buscar?${query}` : "/buscar";
+function toggleAmenityUrl(params: SearchState, amenity: string): string {
+  const isActive = params.amenity?.toLowerCase() === amenity;
+  return withSearch("/buscar", params, {
+    amenity: isActive ? undefined : amenity,
+  });
 }
 
-function sortUrl(params: BuscarParams, sort: string): string {
-  const next = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value && key !== "sort") next.set(key, value);
-  }
-  if (sort !== "relevance") next.set("sort", sort);
-  const query = next.toString();
-  return query ? `/buscar?${query}` : "/buscar";
+function sortUrl(params: SearchState, sort: string): string {
+  return withSearch("/buscar", params, {
+    sort: sort === "relevance" ? undefined : sort,
+  });
+}
+
+function clearDatesUrl(params: SearchState): string {
+  return withSearch("/buscar", params, { from: undefined, to: undefined });
 }
 
 const QUICK_FILTERS = ["wifi", "piscina", "desayuno", "vista al mar"];
+
+/** Etiqueta de disponibilidad de un hotel para la estancia elegida. */
+function StayBadge({ status }: { status: StayAvailability }) {
+  if (status === "available") {
+    return (
+      <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-200">
+        Disponible para tus fechas
+      </span>
+    );
+  }
+  return (
+    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+      Disponibilidad a confirmar
+    </span>
+  );
+}
 
 async function BuscarResults({ params }: { params: BuscarParams }) {
   let hotels = [];
@@ -67,35 +84,58 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
   }
 
   const minCapacity = params.minCap ? Number(params.minCap) : undefined;
+  const guests = params.guests ? Number(params.guests) : undefined;
+  const validGuests =
+    guests && Number.isFinite(guests) && guests > 0 ? guests : undefined;
+
   const filtered = filterHotels(hotels, {
     city: params.city,
     amenity: params.amenity,
     minCapacity: Number.isFinite(minCapacity) ? minCapacity : undefined,
+    guests: validGuests,
   });
 
-  const guests = params.guests ? Number(params.guests) : undefined;
-  const guestFiltered =
-    guests && Number.isFinite(guests) && guests > 0
-      ? filtered.filter((h) =>
-          (h.roomTypes ?? []).some((r) => r.capacity >= guests)
-        )
-      : filtered;
-
-  const visible =
+  const sorted =
     params.sort === "price-asc"
-      ? [...guestFiltered].sort(
+      ? [...filtered].sort(
           (a, b) => (minRate(a) ?? Infinity) - (minRate(b) ?? Infinity)
         )
       : params.sort === "price-desc"
-        ? [...guestFiltered].sort(
+        ? [...filtered].sort(
             (a, b) => (minRate(b) ?? -Infinity) - (minRate(a) ?? -Infinity)
           )
-        : rankHotelsByRelevance(guestFiltered, params.city);
+        : rankHotelsByRelevance(filtered, params.city);
+
+  // La disponibilidad ordena y, solo con evidencia real de agotado, excluye.
+  const nights = stayNights(params.from, params.to);
+  const canCheckStay = nights.length > 0 && nights.length <= 61;
+
+  let visible = sorted;
+  let status = new Map<string, StayAvailability>();
+  if (canCheckStay) {
+    const roomTypes = sorted.flatMap((h) => h.roomTypes ?? []);
+    const stock = await buildStockLookup(roomTypes, params.from!, params.to!);
+    ({ visible, status } = applyStayAvailability(sorted, {
+      from: params.from,
+      to: params.to,
+      guests: validGuests,
+      stock,
+    }));
+  }
 
   const sort = params.sort ?? "relevance";
+  const search: SearchState = {
+    city: params.city,
+    from: params.from,
+    to: params.to,
+    guests: params.guests,
+    amenity: params.amenity,
+    minCap: params.minCap,
+    sort: params.sort,
+  };
 
   const suggestion =
-    visible.length === 0 && params.city
+    visible.length === 0 && !canCheckStay && params.city
       ? suggestHotel(hotels, params.city)
       : null;
 
@@ -119,7 +159,7 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
             </a>
           );
         })}
-        {params.amenity || params.city || params.guests ? (
+        {params.amenity || params.city || params.guests || params.from ? (
           <a
             href="/buscar"
             className="rounded-full px-3 py-1.5 text-sm font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
@@ -128,6 +168,21 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
           </a>
         ) : null}
       </div>
+
+      {canCheckStay ? (
+        <div
+          role="status"
+          className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100"
+        >
+          Disponibilidad consultada para tu estancia.
+          <a
+            href={clearDatesUrl(params)}
+            className="ml-2 font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            Quitar fechas
+          </a>
+        </div>
+      ) : null}
 
       <p role="status" className="mb-4 text-sm text-gray-600 tabular-nums dark:text-gray-300">
         {visible.length === 0
@@ -162,41 +217,55 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
         ))}
       </div>
 
-            {visible.length === 0 ? (
-          suggestion ? (
-            <div className="rounded-lg bg-white px-6 py-12 text-center shadow-md dark:bg-gray-800">
-              <h2 className="mb-2 text-xl font-semibold text-balance">
-                Sin resultados para “{params.city}”
-              </h2>
-              <p className="mx-auto mb-6 max-w-md break-words text-gray-600 dark:text-gray-300">
-                ¿Quisiste decir{" "}
-                <a
-                  href={`/buscar?city=${encodeURIComponent(suggestion.city)}`}
-                  className="font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
-                >
-                  {suggestion.city}
-                </a>
-                ?
-              </p>
+      {visible.length === 0 ? (
+        canCheckStay ? (
+          <EmptyState
+            title="Sin disponibilidad para estas fechas"
+            description="No encontramos habitaciones libres para la estancia elegida. Probá con otras fechas o sin fechas para ver todos los hoteles."
+            actionHref={clearDatesUrl(params)}
+            actionLabel="Buscar sin fechas"
+          />
+        ) : suggestion ? (
+          <div className="rounded-lg bg-white px-6 py-12 text-center shadow-md dark:bg-gray-800">
+            <h2 className="mb-2 text-xl font-semibold text-balance">
+              Sin resultados para “{params.city}”
+            </h2>
+            <p className="mx-auto mb-6 max-w-md break-words text-gray-600 dark:text-gray-300">
+              ¿Quisiste decir{" "}
               <a
-                href="/buscar"
-                className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
+                href={withSearch("/buscar", search, {
+                  city: suggestion.city,
+                })}
+                className="font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
               >
-                Limpiar búsqueda
+                {suggestion.city}
               </a>
-            </div>
-          ) : (
-            <EmptyState
-              title="Sin resultados para esta búsqueda"
-              description="Probá con otra ciudad, quitá algún filtro o ampliá el rango de fechas."
-              actionHref="/buscar"
-              actionLabel="Limpiar búsqueda"
-            />
-          )
+              ?
+            </p>
+            <a
+              href="/buscar"
+              className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
+            >
+              Limpiar búsqueda
+            </a>
+          </div>
+        ) : (
+          <EmptyState
+            title="Sin resultados para esta búsqueda"
+            description="Probá con otra ciudad, quitá algún filtro o ampliá el rango de fechas."
+            actionHref="/buscar"
+            actionLabel="Limpiar búsqueda"
+          />
+        )
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {visible.map((hotel) => (
-            <HotelCard key={hotel.hotel_id} hotel={hotel} />
+            <HotelCard
+              key={hotel.hotel_id}
+              hotel={hotel}
+              search={search}
+              availability={status.get(hotel.hotel_id)}
+            />
           ))}
         </div>
       )}
