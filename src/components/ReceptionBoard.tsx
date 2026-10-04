@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BookingRef, PhysicalRoom } from "@/lib/api";
-import { fetchPhysicalRooms, postJson } from "@/lib/api-client";
+import {
+  fetchAssignment,
+  fetchPhysicalRooms,
+  postJson,
+} from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
+import HousekeepingStatus from "@/components/HousekeepingStatus";
+import InvoicePanel from "@/components/InvoicePanel";
 
 interface ReceptionBoardProps {
   hotelId: string;
@@ -21,6 +27,12 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<PhysicalRoom[]>([]);
+  const [lastCheckout, setLastCheckout] = useState<{
+    bookingId: string;
+    roomNumber: string;
+  } | null>(null);
+  const [hiddenArrivalIds, setHiddenArrivalIds] = useState<string[]>([]);
+  const [showHiddenArrivals, setShowHiddenArrivals] = useState(false);
   const roomNames = useRoomNames(hotelId);
 
   const load = useCallback(
@@ -56,6 +68,32 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       .catch(() => setCatalog([]));
   }, [hotelId]);
 
+  // Ocultado local de llegadas (solo vista). Persiste en localStorage.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("hotelsync-hidden-arrivals");
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) {
+        setHiddenArrivalIds(parsed.filter((v): v is string => typeof v === "string"));
+      }
+    } catch {
+      // Sin persistencia: la vista funciona igual en la sesión.
+    }
+  }, []);
+
+  const persistHiddenArrivals = (ids: string[]) => {
+    setHiddenArrivalIds(ids);
+    try {
+      window.localStorage.setItem("hotelsync-hidden-arrivals", JSON.stringify(ids));
+    } catch {
+      // Sin persistencia igual funciona en la sesión.
+    }
+  };
+
+  const visibleArrivals = (arrivals ?? []).filter(
+    (b) => showHiddenArrivals || !hiddenArrivalIds.includes(b.booking_id)
+  );
+
   const handleCheckIn = async (bookingId: string) => {
     const room = (rooms[bookingId] || "").trim();
     if (!room) {
@@ -83,13 +121,38 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
     setBusy(bookingId);
     setError(null);
     try {
-      await postJson("/api/front-desk/check-out", { booking_id: bookingId });
+      const assignment = await postJson<{
+        booking_id: string;
+        physical_room_number: string;
+      }>("/api/front-desk/check-out", { booking_id: bookingId });
       // Optimista: el aviso sale al instante; la lista se revalida en fondo.
-      setNotice(`Check-out OK: reserva ${bookingId.slice(0, 8)}… (checkout.completed emitido)`);
+      setNotice(`Check-out OK: reserva ${bookingId.slice(0, 8)}… salió de la lista de llegadas (checkout.completed emitido)`);
+      setLastCheckout({
+        bookingId,
+        roomNumber: assignment.physical_room_number,
+      });
       setBusy(null);
       void load(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo hacer el check-out");
+      const raw =
+        err instanceof Error ? err.message : "No se pudo hacer el check-out";
+      if (/already checked out/i.test(raw)) {
+        // La estadía ya está cerrada: mostrar cuándo en vez del error crudo.
+        try {
+          const assignment = await fetchAssignment(bookingId);
+          const when = assignment.checked_out_at
+            ? String(assignment.checked_out_at).slice(0, 16).replace("T", " ")
+            : null;
+          setError(null);
+          setNotice(
+            `Esa reserva ya hizo check-out${when ? ` el ${when}` : ""} en la habitación ${assignment.physical_room_number}. No hay nada por cerrar.`
+          );
+        } catch {
+          setError(raw);
+        }
+      } else {
+        setError(raw);
+      }
       setBusy(null);
     }
   };
@@ -117,15 +180,37 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
         ) : null}
       </div>
 
-      {!arrivals || arrivals.length === 0 ? (
+      {lastCheckout ? (
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <InvoicePanel bookingId={lastCheckout.bookingId} />
+          <HousekeepingStatus
+            hotelId={hotelId}
+            roomNumber={lastCheckout.roomNumber}
+            bookingId={lastCheckout.bookingId}
+          />
+        </div>
+      ) : null}
+
+      {!arrivals || visibleArrivals.length === 0 ? (
         <div className="rounded-lg bg-white p-6 text-center shadow dark:bg-gray-800">
           <p className="font-medium text-gray-700 dark:text-gray-200">
-            No hay llegadas confirmadas para esta fecha.
+            {showHiddenArrivals || hiddenArrivalIds.length === 0
+              ? "No hay llegadas confirmadas para esta fecha."
+              : "Todas las llegadas de esta fecha están ocultas."}
           </p>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Este tablero solo muestra confirmed del read model de Front Desk. Mirá la
             pestaña Reservas para ver las pending recién creadas en Booking.
           </p>
+          {!showHiddenArrivals && hiddenArrivalIds.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowHiddenArrivals(true)}
+              className="mt-4 ml-2 rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
+            >
+              Mostrar ocultas ({hiddenArrivalIds.length})
+            </button>
+          ) : null}
             <button
               type="button"
               onClick={() => void load()}
@@ -137,10 +222,27 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       ) : (
         <div>
           <p role="status" className="mb-3 text-sm text-gray-600 tabular-nums dark:text-gray-300">
-            {arrivals.length === 1 ? "1 llegada confirmada" : `${arrivals.length} llegadas confirmadas`}
+            {visibleArrivals.length === 1 ? "1 llegada confirmada" : `${visibleArrivals.length} llegadas confirmadas`}
+            {showHiddenArrivals ? (
+              <button
+                type="button"
+                onClick={() => setShowHiddenArrivals(false)}
+                className="ml-2 underline underline-offset-2"
+              >
+                Ocultar de nuevo
+              </button>
+            ) : hiddenArrivalIds.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowHiddenArrivals(true)}
+                className="ml-2 underline underline-offset-2"
+              >
+                Mostrar ocultas ({hiddenArrivalIds.length})
+              </button>
+            ) : null}
           </p>
         <ul className="space-y-4">
-          {arrivals.map((b) => (
+          {visibleArrivals.map((b) => (
             <li
               key={b.booking_id}
               className="rounded-lg bg-white p-4 shadow dark:bg-gray-800"
@@ -201,6 +303,30 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
                 >
                   Check-out
                 </button>
+                {showHiddenArrivals && hiddenArrivalIds.includes(b.booking_id) ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      persistHiddenArrivals(
+                        hiddenArrivalIds.filter((id) => id !== b.booking_id)
+                      )
+                    }
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Restaurar
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    title="Quitar de la vista (solo local, no borra la llegada)"
+                    onClick={() =>
+                      persistHiddenArrivals([...hiddenArrivalIds, b.booking_id])
+                    }
+                    className="rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700"
+                  >
+                    Quitar
+                  </button>
+                )}
               </div>
             </li>
           ))}

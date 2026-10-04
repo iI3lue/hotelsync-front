@@ -1,5 +1,6 @@
 import type { RoomType, SearchState } from "@/lib/api";
-import { formatPrice, withSearch } from "@/lib/api";
+import { withSearch } from "@/lib/api";
+import Money from "@/components/Money";
 
 interface RoomTypeCardProps {
   roomType: RoomType;
@@ -15,7 +16,7 @@ export default function RoomTypeCard({ roomType, search }: RoomTypeCardProps) {
         {roomType.capacity === 1 ? "huésped" : "huéspedes"}
       </p>
       <p className="text-blue-600 font-bold text-lg mb-3 tabular-nums dark:text-blue-400">
-        {formatPrice(roomType.base_rate)} / noche
+        <Money amountCOP={roomType.base_rate} /> / noche
       </p>
       {roomType.amenities && roomType.amenities.length > 0 && (
         <ul className="mb-4 flex flex-wrap gap-2">

@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { Booking, BookingCreated, RoomType } from "@/lib/api";
 import { postJson } from "@/lib/api-client";
 import { formatDate, formatPrice } from "@/lib/format";
+import Money from "@/components/Money";
+import { useCurrency } from "@/components/CurrencyProvider";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import Spinner from "@/components/Spinner";
 
@@ -52,6 +54,7 @@ export default function BookingForm({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const { currency } = useCurrency();
 
   const rate = Number(roomType.base_rate);
   const nights =
@@ -178,11 +181,16 @@ export default function BookingForm({
                   {nights === 1 ? "noche" : "noches"}
                 </p>
                 <p className="mt-1 tabular-nums">
-                  {nights} × {formatPrice(rate)} ={" "}
+                  {nights} × <Money amountCOP={rate} /> ={" "}
                   <span className="text-base font-bold">
-                    {formatPrice(total)}
+                    <Money amountCOP={total} />
                   </span>
                 </p>
+                {currency !== "COP" && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Monto de referencia en {currency}; el cobro se hace en COP.
+                  </p>
+                )}
               </>
             ) : (
               <p className="mt-1 text-gray-600 dark:text-gray-300">
@@ -330,7 +338,7 @@ export default function BookingForm({
             <div className="flex gap-2">
               <dt className="font-medium">Total:</dt>
               <dd className="tabular-nums font-semibold">
-                {formatPrice(booking.total_amount)}
+                <Money amountCOP={booking.total_amount} />
               </dd>
             </div>
           </dl>
