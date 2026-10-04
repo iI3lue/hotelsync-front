@@ -201,6 +201,12 @@ export async function postJson<T>(url: string, body: unknown): Promise<T> {
   return clientPost<T>(url, body);
 }
 
+export async function fetchHotelByIdClient(hotelId: string): Promise<Hotel> {
+  return clientFetch<Hotel>(
+    `/api/property/hotels/${encodeURIComponent(hotelId)}`
+  );
+}
+
 /** Asignación de habitación de una reserva (404 si no tiene check-in). */
 export async function fetchAssignment(
   bookingId: string
