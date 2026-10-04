@@ -44,7 +44,7 @@ export default function SearchBar({
       onSubmit={handleSubmit}
       role="search"
       aria-label="Buscar hoteles"
-      className="grid grid-cols-1 gap-4 rounded-lg bg-white p-4 shadow-md dark:bg-gray-800 md:grid-cols-[2fr_1fr_1fr_1fr_auto]"
+      className="grid grid-cols-1 gap-4 rounded-2xl bg-white p-5 shadow-xl dark:bg-gray-800 md:grid-cols-[2fr_1fr_1fr_1fr_auto]"
     >
       <div className="min-w-0">
         <label htmlFor="search-city" className={labelClass}>
@@ -102,7 +102,7 @@ export default function SearchBar({
       <div className="flex items-end">
         <button
           type="submit"
-          className="w-full rounded bg-blue-600 px-6 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation md:w-auto dark:focus-visible:ring-offset-gray-800"
+          className="btn-press w-full rounded bg-amber-400 px-6 py-2 font-semibold text-blue-950 hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2 touch-manipulation md:w-auto dark:focus-visible:ring-offset-gray-800"
         >
           Buscar
         </button>

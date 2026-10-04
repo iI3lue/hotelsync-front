@@ -1,6 +1,4 @@
-"use client";
-
-import Money from "@/components/Money";
+import { formatPrice } from "@/lib/format";
 
 /**
  * Precio "desde" compartido: mismo bloque en cards y detalle.
@@ -20,7 +18,7 @@ export default function PriceFrom({
         size === "lg" ? "mb-6 text-xl" : "mb-1 text-lg"
       }`}
     >
-      <Money amountCOP={rate} />{" "}
+      {formatPrice(rate)}{" "}
       <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
         / noche desde
       </span>

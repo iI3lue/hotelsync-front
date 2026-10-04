@@ -14,6 +14,10 @@ const nextConfig = {
         destination: `${process.env.NEXT_PUBLIC_RATE_API_URL || "http://localhost:3002/v1"}/:path*`,
       },
       {
+        source: "/api/users/:path*",
+        destination: `${process.env.NEXT_PUBLIC_USER_API_URL || "http://localhost:3003/v1"}/:path*`,
+      },
+      {
         source: "/api/booking/:path*",
         destination: `${process.env.NEXT_PUBLIC_BOOKING_API_URL || "http://localhost:3004/v1"}/:path*`,
       },

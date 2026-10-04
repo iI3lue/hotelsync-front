@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { memo } from "react";
-import type { Hotel } from "@/lib/api";
-import { minRate } from "@/lib/format";
+import type { Hotel, SearchState, StayAvailability } from "@/lib/api";
+import { minRate, withSearch } from "@/lib/api";
 import PriceFrom from "@/components/PriceFrom";
 
 function initials(name: string): string {
@@ -12,7 +12,28 @@ function initials(name: string): string {
     .join("");
 }
 
-function HotelCard({ hotel }: { hotel: Hotel }) {
+function AvailabilityBadge({ status }: { status: StayAvailability }) {
+  if (status === "available") {
+    return (
+      <span className="mb-3 inline-flex w-fit rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-200">
+        Disponible para tus fechas
+      </span>
+    );
+  }
+  return (
+    <span className="mb-3 inline-flex w-fit rounded bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+      Disponibilidad a confirmar
+    </span>
+  );
+}
+
+interface HotelCardProps {
+  hotel: Hotel;
+  search?: SearchState;
+  availability?: StayAvailability;
+}
+
+function HotelCard({ hotel, search, availability }: HotelCardProps) {
   const roomTypes = hotel.roomTypes ?? [];
   const roomTypeCount = roomTypes.length;
   const rate = minRate(hotel);
@@ -27,7 +48,7 @@ function HotelCard({ hotel }: { hotel: Hotel }) {
     >
       <div
         aria-hidden="true"
-        className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-800 text-4xl font-bold text-white"
+        className="flex aspect-video w-full items-center justify-center bg-gradient-to-br from-blue-800 to-indigo-950 text-4xl font-bold text-white"
       >
         {initials(hotel.name)}
       </div>
@@ -36,6 +57,7 @@ function HotelCard({ hotel }: { hotel: Hotel }) {
         <p className="mb-3 break-words text-gray-600 dark:text-gray-300">
           {hotel.city}, {hotel.country}
         </p>
+        {availability ? <AvailabilityBadge status={availability} /> : null}
         {rate !== null ? <PriceFrom rate={rate} /> : null}
         <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
           {roomTypeCount === 0
@@ -58,14 +80,14 @@ function HotelCard({ hotel }: { hotel: Hotel }) {
         ) : null}
         <div className="mt-auto flex flex-wrap items-center gap-2">
           <Link
-            href={`/hotels/${hotel.hotel_id}`}
+            href={withSearch(`/hotels/${hotel.hotel_id}`, search)}
             aria-label={`Ver detalles de ${hotel.name}`}
             className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
           >
             Ver detalles
           </Link>
           <Link
-            href={`/hotels/${hotel.hotel_id}/availability`}
+            href={withSearch(`/hotels/${hotel.hotel_id}/availability`, search)}
             aria-label={`Consultar disponibilidad en ${hotel.name}`}
             className="inline-block rounded px-4 py-2 font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation dark:text-blue-400"
           >

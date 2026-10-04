@@ -1,5 +1,11 @@
 import { cache } from "react";
-import type { HotelFilters } from "./format";
+import type {
+  HotelFilters,
+  SearchState,
+  StayAvailability,
+  StayInfo,
+  StockLookup,
+} from "./format";
 
 /**
  * Capa de acceso a datos SOLO SERVIDOR (RSC, Server Actions, route handlers).
@@ -7,8 +13,22 @@ import type { HotelFilters } from "./format";
  * deben usar `@/lib/api-client` (rewrites /api/*) y `@/lib/format`
  * (helpers puros); importar este módulo en el browser rompe el bundle.
  */
-export type { HotelFilters };
-export { filterHotels, formatDate, formatPrice, matchScore, minRate, normalizeText, rankHotelsByRelevance, suggestHotel } from "./format";
+export type { HotelFilters, SearchState, StayAvailability, StayInfo, StockLookup };
+export {
+  applyStayAvailability,
+  filterHotels,
+  formatDate,
+  formatPrice,
+  hotelStayAvailability,
+  matchScore,
+  minRate,
+  normalizeText,
+  rankHotelsByRelevance,
+  searchQuery,
+  stayNights,
+  suggestHotel,
+  withSearch,
+} from "./format";
 
 const PROPERTY_API = process.env.NEXT_PUBLIC_PROPERTY_API_URL || "http://localhost:3001/v1";
 const RATE_API = process.env.NEXT_PUBLIC_RATE_API_URL || "http://localhost:3002/v1";
@@ -34,6 +54,16 @@ export interface RoomType {
   amenities: string[];
 }
 
+export interface PhysicalRoom {
+  physical_room_id: string;
+  hotel_id: string;
+  room_type_id: string;
+  room_number: string;
+  available_from: string;
+  is_active: boolean;
+  roomType: Pick<RoomType, "room_type_id" | "name">;
+}
+
 export interface CancellationPolicy {
   policy_id: string;
   hotel_id: string;
@@ -49,6 +79,10 @@ export interface Availability {
 export interface Booking {
   booking_id: string;
   guest_id: string;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  booked_by_user_id: string | null;
   hotel_id: string;
   room_type_id: string;
   check_in: string;
@@ -58,15 +92,22 @@ export interface Booking {
   total_amount: number | string;
 }
 
+/** Respuesta del alta: incluye el manage token una sola vez. */
+export interface BookingCreated extends Booking {
+  manage_token: string;
+}
+
 /** Alias de compatibilidad con el admin original. */
 export type BookingRef = Booking & {
   status: Booking["status"] | (string & {});
   channel: Booking["channel"] | (string & {});
+  guest_name?: string | null;
 };
 
 export interface RoomAssignment {
   assignment_id: string;
   booking_id: string;
+  physical_room_id?: string | null;
   physical_room_number: string;
   checked_in_at: string;
   checked_out_at: string | null;
@@ -128,6 +169,12 @@ export async function fetchRoomTypes(hotelId: string): Promise<RoomType[]> {
   return cachedFetchRoomTypes(hotelId);
 }
 
+export async function fetchPhysicalRooms(hotelId: string): Promise<PhysicalRoom[]> {
+  return apiFetch<PhysicalRoom[]>(
+    `${PROPERTY_API}/hotels/${encodeURIComponent(hotelId)}/rooms`
+  );
+}
+
 // Per-request dedup (server-cache-react): misma URL = 1 solo viaje al backend.
 const cachedFetchHotels = cache(async (): Promise<Hotel[]> => {
   return apiFetch<Hotel[]>(`${PROPERTY_API}/hotels`);
@@ -167,6 +214,74 @@ export async function fetchAvailability(
   return apiFetch<Availability>(
     `${RATE_API}/availability?room_type_id=${roomTypeId}&date=${date}`
   );
+}
+
+/**
+ * Disponibilidad de un rango en un solo request (mismo endpoint que usa el
+ * calendario). `to` es inclusivo en el backend; para estancias se consulta
+ * hasta la fecha de check-out y solo se leen las noches ocupadas.
+ */
+export async function fetchAvailabilityRange(
+  roomTypeId: string,
+  from: string,
+  to: string
+): Promise<Record<string, Availability>> {
+  return apiFetch<Record<string, Availability>>(
+    `${RATE_API}/availability/range?room_type_id=${encodeURIComponent(
+      roomTypeId
+    )}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  );
+}
+
+const STAY_CONCURRENCY = 6;
+
+/**
+ * Construye una consulta de stock para un rango de fechas a partir del
+ * endpoint existente, con concurrencia acotada.
+ *
+ * El endpoint reporta `available: 0` tanto para fechas sin fila de inventario
+ * como para fechas realmente agotadas. Un room type cuyo rango entero es 0 se
+ * trata como "sin inventario cargado" (devuelve `undefined`) para que la
+ * búsqueda no excluya hoteles por datos faltantes.
+ */
+export async function buildStockLookup(
+  roomTypes: RoomType[],
+  from: string,
+  to: string
+): Promise<StockLookup> {
+  const data = new Map<string, Record<string, Availability>>();
+  const queue = [...roomTypes];
+  const workers = Array.from(
+    { length: Math.min(STAY_CONCURRENCY, Math.max(queue.length, 1)) },
+    async () => {
+      while (queue.length > 0) {
+        const roomType = queue.shift();
+        if (!roomType) break;
+        try {
+          const range = await fetchAvailabilityRange(
+            roomType.room_type_id,
+            from,
+            to
+          );
+          data.set(roomType.room_type_id, range);
+        } catch {
+          // Sin datos: se degrada a "unknown" en vez de excluir hoteles.
+        }
+      }
+    }
+  );
+  await Promise.all(workers);
+
+  const managed = new Set<string>();
+  for (const [roomTypeId, range] of data) {
+    const anyPositive = Object.values(range).some((day) => (day.available ?? 0) > 0);
+    if (anyPositive) managed.add(roomTypeId);
+  }
+
+  return (roomTypeId: string, iso: string) => {
+    if (!managed.has(roomTypeId)) return undefined;
+    return data.get(roomTypeId)?.[iso]?.available;
+  };
 }
 
 export async function blockInventory(data: {

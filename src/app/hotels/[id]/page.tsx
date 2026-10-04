@@ -1,4 +1,9 @@
-import { fetchHotelById, fetchRoomTypes } from "@/lib/api";
+import {
+  fetchHotelById,
+  fetchRoomTypes,
+  withSearch,
+  type SearchState,
+} from "@/lib/api";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import PriceFrom from "@/components/PriceFrom";
 import RoomTypeCard from "@/components/RoomTypeCard";
@@ -6,10 +11,25 @@ import EmptyState from "@/components/EmptyState";
 
 export default async function HotelDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<SearchState>;
 }) {
   const { id } = await params;
+  const state = await searchParams;
+  const search: SearchState = {
+    city: state.city,
+    from: state.from,
+    to: state.to,
+    guests: state.guests,
+    amenity: state.amenity,
+    minCap: state.minCap,
+    sort: state.sort,
+    room_type_id: state.room_type_id,
+    date: state.date,
+  };
+
   // Paralelo: hotel + habitaciones (async-parallel).
   const [hotel, roomTypes] = await Promise.all([
     fetchHotelById(id).catch(() => null),
@@ -21,7 +41,7 @@ export default async function HotelDetailPage({
       <EmptyState
         title="No encontramos este hotel"
         description="El hotel no existe o el servicio no responde. Volvé al listado e intentá de nuevo."
-        actionHref="/"
+        actionHref={withSearch("/", search)}
         actionLabel="Volver al inicio"
       />
     );
@@ -36,7 +56,7 @@ export default async function HotelDetailPage({
 
       <div
         aria-hidden="true"
-        className="mb-6 flex aspect-[21/9] w-full items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-800 text-6xl font-bold text-white"
+        className="mb-6 flex aspect-[21/9] w-full items-center justify-center rounded-2xl bg-gradient-to-br from-blue-800 to-indigo-950 text-6xl font-bold text-white"
       >
         {hotel.name.charAt(0).toUpperCase()}
       </div>
@@ -49,13 +69,13 @@ export default async function HotelDetailPage({
 
       <div className="mb-8 flex flex-wrap gap-3">
         <a
-          href={`/hotels/${id}/availability`}
+          href={withSearch(`/hotels/${id}/availability`, search)}
           className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
         >
           Consultar disponibilidad
         </a>
         <a
-          href={`/reservas/nueva?hotel=${encodeURIComponent(id)}`}
+          href={withSearch("/reservas/nueva", search, { room_type_id: undefined, date: undefined })}
           className="inline-block rounded px-4 py-2 font-medium text-green-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 touch-manipulation dark:text-green-400"
         >
           Reservar ahora
@@ -88,7 +108,7 @@ export default async function HotelDetailPage({
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {roomTypes.map((roomType) => (
-            <RoomTypeCard key={roomType.room_type_id} roomType={roomType} />
+            <RoomTypeCard key={roomType.room_type_id} roomType={roomType} search={search} />
           ))}
         </div>
       )}

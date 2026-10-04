@@ -1,6 +1,6 @@
-import { fetchRoomTypes } from "@/lib/api";
+import { fetchPhysicalRooms, fetchRoomTypes } from "@/lib/api";
+import PhysicalRoomForm from "@/components/PhysicalRoomForm";
 import RoomTypeForm from "@/components/RoomTypeForm";
-import Money from "@/components/Money";
 
 export default async function RoomTypesPage({
   params,
@@ -8,7 +8,10 @@ export default async function RoomTypesPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const roomTypes = await fetchRoomTypes(id);
+  const [roomTypes, physicalRooms] = await Promise.all([
+    fetchRoomTypes(id),
+    fetchPhysicalRooms(id),
+  ]);
 
   return (
     <div>
@@ -45,7 +48,7 @@ export default async function RoomTypesPage({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">{rt.capacity}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Money amountCOP={rt.base_rate} />
+                  ${Number(rt.base_rate).toLocaleString("es-AR")}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {rt.amenities?.join(", ") || "—"}
@@ -55,6 +58,68 @@ export default async function RoomTypesPage({
           </tbody>
         </table>
       </div>
+
+      <section className="mt-10" aria-labelledby="physical-rooms-heading">
+        <h2 id="physical-rooms-heading" className="mb-2 text-2xl font-semibold">
+          Habitaciones físicas
+        </h2>
+        <p className="mb-5 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+          Registrá cada unidad del hotel. Al darla de alta, su disponibilidad se agrega a R&A desde la fecha indicada.
+        </p>
+
+        <div className="mb-6 rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+          <PhysicalRoomForm hotelId={id} roomTypes={roomTypes} />
+        </div>
+
+        <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-gray-800">
+          <table className="w-full table-fixed">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="break-words px-2 py-3 text-left text-[10px] font-medium uppercase text-gray-500 dark:text-gray-300 md:px-6 md:text-xs">
+                  Habitación
+                </th>
+                <th className="break-words px-2 py-3 text-left text-[10px] font-medium uppercase text-gray-500 dark:text-gray-300 md:px-6 md:text-xs">
+                  Tipo
+                </th>
+                <th className="break-words px-2 py-3 text-left text-[10px] font-medium uppercase text-gray-500 dark:text-gray-300 md:px-6 md:text-xs">
+                  Disponible desde
+                </th>
+                <th className="break-words px-2 py-3 text-left text-[10px] font-medium uppercase text-gray-500 dark:text-gray-300 md:px-6 md:text-xs">
+                  Estado
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {physicalRooms.map((room) => (
+                <tr key={room.physical_room_id}>
+                  <td className="break-all px-2 py-3 text-xs font-medium md:px-6 md:py-4 md:text-sm">
+                    {room.room_number}
+                  </td>
+                  <td className="break-words px-2 py-3 text-xs md:px-6 md:py-4 md:text-sm">
+                    {room.roomType.name}
+                  </td>
+                  <td className="break-words px-2 py-3 text-xs tabular-nums md:px-6 md:py-4 md:text-sm">
+                    {room.available_from.slice(0, 10)}
+                  </td>
+                  <td className="break-words px-2 py-3 text-xs md:px-6 md:py-4 md:text-sm">
+                    {room.is_active ? "Activa" : "Inactiva"}
+                  </td>
+                </tr>
+              ))}
+              {physicalRooms.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-6 py-8 text-center text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    Todavía no hay habitaciones físicas registradas.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

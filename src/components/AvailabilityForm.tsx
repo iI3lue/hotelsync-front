@@ -2,8 +2,13 @@
 
 import { useState, useTransition } from "react";
 import useSWR from "swr";
-import type { Availability, RoomType } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import {
+  formatDate,
+  withSearch,
+  type Availability,
+  type RoomType,
+  type SearchState,
+} from "@/lib/api";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import Spinner from "@/components/Spinner";
 
@@ -13,6 +18,7 @@ interface AvailabilityFormProps {
   initialRoomTypeId?: string;
   initialDate?: string;
   initialAvailability?: Availability | null;
+  search?: SearchState;
 }
 
 const fetcher = async (url: string): Promise<Availability> => {
@@ -32,6 +38,7 @@ export default function AvailabilityForm({
   initialRoomTypeId = "",
   initialDate = "",
   initialAvailability = null,
+  search,
 }: AvailabilityFormProps) {
   const [roomId, setRoomId] = useState(initialRoomTypeId);
   const [date, setDate] = useState(initialDate);
@@ -165,7 +172,11 @@ export default function AvailabilityForm({
             ) : null}
             {data.available > 0 && submitted ? (
               <a
-                href={`/reservas/nueva?hotel=${encodeURIComponent(hotelId)}&room_type_id=${encodeURIComponent(submitted.roomId)}&date=${encodeURIComponent(submitted.date)}`}
+                href={withSearch("/reservas/nueva", search, {
+                  hotel: hotelId,
+                  room_type_id: submitted.roomId,
+                  date: submitted.date,
+                })}
                 className="mt-4 inline-block rounded bg-green-600 px-4 py-2 font-medium text-white transition-colors hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 touch-manipulation"
               >
                 Continuar con la reserva
