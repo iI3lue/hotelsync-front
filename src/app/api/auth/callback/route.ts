@@ -28,7 +28,7 @@ function safeReturnTo(state: string | null): string {
 
 function oauthError(message: string): NextResponse {
   const response = NextResponse.redirect(
-    `${appBaseUrl()}/cuenta/entrar?error=oauth`
+    `${appBaseUrl()}/cuenta/entrar?error=oauth&step=${encodeURIComponent(message)}`
   );
   response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
   response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
@@ -49,6 +49,10 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const returnedState = params.get("state");
   const code = params.get("code");
+  const auth0Error = params.get("error");
+  if (auth0Error) {
+    return oauthError(`auth0_${auth0Error}`);
+  }
   const expectedState = request.cookies.get("hs_oauth_state")?.value;
   const nonce = request.cookies.get("hs_oauth_nonce")?.value;
   const verifier = request.cookies.get("hs_oauth_verifier")?.value;
@@ -97,7 +101,7 @@ export async function GET(request: NextRequest) {
   if (!federated.ok) {
     const conflict = federated.status === 409;
     const response = NextResponse.redirect(
-      `${appBaseUrl()}/cuenta/entrar?error=${conflict ? "linked" : "oauth"}`
+      `${appBaseUrl()}/cuenta/entrar?error=${conflict ? "linked" : "oauth"}&step=federated_${federated.status}`
     );
     response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
     response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
