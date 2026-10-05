@@ -9,8 +9,9 @@ import {
 
 function safeReturnTo(state: string | null): string {
   try {
+    const encoded = (state ?? "").split(".")[1] ?? "";
     const parsed = JSON.parse(
-      Buffer.from(state ?? "", "base64url").toString("utf8")
+      Buffer.from(encoded, "base64url").toString("utf8")
     ) as { returnTo?: string };
     if (
       typeof parsed.returnTo === "string" &&
@@ -25,16 +26,45 @@ function safeReturnTo(state: string | null): string {
   return "/mis-reservas";
 }
 
-/** Callback OAuth: canjea el code, vincula la cuenta y crea la sesión. */
+function oauthError(message: string): NextResponse {
+  const response = NextResponse.redirect(
+    `${appBaseUrl()}/cuenta/entrar?error=oauth`
+  );
+  response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
+  response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
+  response.cookies.set("hs_oauth_verifier", "", { path: "/api/auth/callback", maxAge: 0 });
+  response.headers.set("x-oauth-error", message);
+  return response;
+}
+
+/**
+ * Callback OAuth: solo acepta el flujo que este navegador inició (state
+ * en cookie HttpOnly, un solo uso), canjea el code con PKCE y vincula
+ * la cuenta pasando el nonce a user-service para que lo exija en el id_token.
+ */
 export async function GET(request: NextRequest) {
   const auth0 = auth0Config();
   if (!auth0) return errorJson("Google login is not configured", 503);
 
-  const code = request.nextUrl.searchParams.get("code");
-  const returnTo = safeReturnTo(request.nextUrl.searchParams.get("state"));
-  if (!code) {
-    return NextResponse.redirect(`${appBaseUrl()}/cuenta/entrar?error=oauth`);
+  const params = request.nextUrl.searchParams;
+  const returnedState = params.get("state");
+  const code = params.get("code");
+  const expectedState = request.cookies.get("hs_oauth_state")?.value;
+  const nonce = request.cookies.get("hs_oauth_nonce")?.value;
+  const verifier = request.cookies.get("hs_oauth_verifier")?.value;
+
+  if (
+    !code ||
+    !returnedState ||
+    !expectedState ||
+    !nonce ||
+    !verifier ||
+    returnedState.split(".")[0] !== expectedState
+  ) {
+    return oauthError("invalid_state");
   }
+
+  const returnTo = safeReturnTo(returnedState);
 
   const tokens = await fetch(`https://${auth0.domain}/oauth/token`, {
     method: "POST",
@@ -45,25 +75,34 @@ export async function GET(request: NextRequest) {
       client_secret: auth0.clientSecret,
       code,
       redirect_uri: `${appBaseUrl()}/api/auth/callback`,
+      code_verifier: verifier,
     }),
   })
     .then((r) => r.json() as Promise<{ id_token?: string }>)
     .catch(() => ({} as { id_token?: string }));
 
   if (!tokens.id_token) {
-    return NextResponse.redirect(`${appBaseUrl()}/cuenta/entrar?error=oauth`);
+    return oauthError("token_exchange_failed");
   }
 
   const federated = await fetch(`${USER_API}/auth/federated`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ provider: "auth0", id_token: tokens.id_token }),
+    body: JSON.stringify({
+      provider: "auth0",
+      id_token: tokens.id_token,
+      nonce,
+    }),
   });
   if (!federated.ok) {
     const conflict = federated.status === 409;
-    return NextResponse.redirect(
+    const response = NextResponse.redirect(
       `${appBaseUrl()}/cuenta/entrar?error=${conflict ? "linked" : "oauth"}`
     );
+    response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
+    response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
+    response.cookies.set("hs_oauth_verifier", "", { path: "/api/auth/callback", maxAge: 0 });
+    return response;
   }
   const session = (await federated.json()) as {
     access_token: string;
@@ -71,6 +110,9 @@ export async function GET(request: NextRequest) {
   };
 
   const response = NextResponse.redirect(`${appBaseUrl()}${returnTo}`);
+  response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
+  response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
+  response.cookies.set("hs_oauth_verifier", "", { path: "/api/auth/callback", maxAge: 0 });
   setSessionCookies(response, session);
   return response;
 }

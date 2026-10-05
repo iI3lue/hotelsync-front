@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ACCESS_MAX_AGE = 8 * 60 * 60;
+const ACCESS_MAX_AGE = 15 * 60;
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;
 
 export const USER_API =
@@ -51,10 +51,16 @@ export function setSessionCookies(
 export function clearSessionCookies(response: NextResponse): void {
   response.cookies.set("hs_access", "", {
     path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 0,
   });
   response.cookies.set("hs_refresh", "", {
     path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
     maxAge: 0,
   });
 }
