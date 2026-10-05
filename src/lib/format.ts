@@ -11,35 +11,52 @@ export type { Hotel, RoomType };
  * Moneda de visualización. Los montos del dominio viajan y se cobran
  * todo en COP (ver billing DEFAULT_CURRENCY); la conversión es SOLO visual.
  */
-export const CURRENCIES = ["COP", "USD", "EUR"] as const;
+export const CURRENCIES = [
+  "COP",
+  "USD",
+  "EUR",
+  "MXN",
+  "BRL",
+  "CLP",
+  "PEN",
+  "ARS",
+] as const;
 export type Currency = (typeof CURRENCIES)[number];
 export const DEFAULT_CURRENCY: Currency = "COP";
 
 /**
- * Tasa de referencia COP por unidad (2026-09-28). Fija a propósito: la demo
- * es determinista y no depende de un proveedor externo de cotizaciones.
- * No es cotización en vivo.
+ * Tasas COP por unidad. El proveedor en vivo (/api/rates) las reemplaza en
+ * cuanto responde; esto queda como fallback si el proveedor cae, para no
+ * romper la UI. ARS es tasa oficial.
  */
-const COP_PER_UNIT: Record<Currency, number> = {
+export const STATIC_COP_PER_UNIT: Record<Currency, number> = {
   COP: 1,
   USD: 4100,
   EUR: 4450,
+  MXN: 240,
+  BRL: 780,
+  CLP: 4.4,
+  PEN: 1100,
+  ARS: 3.4,
 };
 
+function formatterFor(locale: string, currency: string, noDecimals = false) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    ...(noDecimals ? { maximumFractionDigits: 0 } : {}),
+  });
+}
+
 const moneyFormatters: Record<Currency, Intl.NumberFormat> = {
-  COP: new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "COP",
-    maximumFractionDigits: 0,
-  }),
-  USD: new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }),
-  EUR: new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-  }),
+  COP: formatterFor("es-CO", "COP", true),
+  USD: formatterFor("en-US", "USD"),
+  EUR: formatterFor("es-ES", "EUR"),
+  MXN: formatterFor("es-MX", "MXN"),
+  BRL: formatterFor("pt-BR", "BRL"),
+  CLP: formatterFor("es-CL", "CLP", true),
+  PEN: formatterFor("es-PE", "PEN"),
+  ARS: formatterFor("es-AR", "ARS"),
 };
 
 export function isCurrency(value: unknown): value is Currency {
@@ -49,20 +66,29 @@ export function isCurrency(value: unknown): value is Currency {
   );
 }
 
-/** Convierte un monto en COP a la moneda pedida (solo visual). */
+/**
+ * Convierte un monto en COP a la moneda pedida (solo visual). La conversión
+ * se hace una sola vez sobre el total en COP, nunca línea por línea, para no
+ * acumular redondeo.
+ */
 export function convertFromCOP(
   amountCOP: number | string,
-  currency: Currency
+  currency: Currency,
+  copPerUnit: Record<Currency, number> = STATIC_COP_PER_UNIT
 ): number {
-  return Number(amountCOP) / COP_PER_UNIT[currency];
+  const rate = copPerUnit[currency] ?? STATIC_COP_PER_UNIT[currency];
+  return Number(amountCOP) / rate;
 }
 
 /** Formatea un monto en COP en la moneda pedida (solo visual). */
 export function formatMoney(
   amountCOP: number | string,
-  currency: Currency
+  currency: Currency,
+  copPerUnit: Record<Currency, number> = STATIC_COP_PER_UNIT
 ): string {
-  return moneyFormatters[currency].format(convertFromCOP(amountCOP, currency));
+  return moneyFormatters[currency].format(
+    convertFromCOP(amountCOP, currency, copPerUnit)
+  );
 }
 
 export interface HotelFilters {
