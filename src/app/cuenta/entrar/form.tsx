@@ -15,6 +15,16 @@ function safeReturnTo(value: string | undefined): string {
   return "/mis-reservas";
 }
 
+/**
+ * Destino post-login: el personal (no GUEST) va a /admin salvo que haya
+ * un returnTo explícito. Antes todos caían en /mis-reservas, incluso el
+ * admin, sin forma de salir de ahí.
+ */
+function postLoginDest(profile: { role: string }, returnTo: string): string {
+  if (profile.role !== "GUEST" && returnTo === "/mis-reservas") return "/admin";
+  return returnTo;
+}
+
 export default function EnterForm({
   params,
 }: {
@@ -40,7 +50,7 @@ export default function EnterForm({
         );
       }
       void me().then((profile) => {
-        if (profile) router.replace(safeReturnTo(p.returnTo));
+        if (profile) router.replace(postLoginDest(profile, safeReturnTo(p.returnTo)));
       });
     });
   }, [params, router]);
@@ -50,8 +60,8 @@ export default function EnterForm({
     setLoading(true);
     setError(null);
     try {
-      await login(email.trim(), password);
-      router.push(returnTo);
+      const profile = await login(email.trim(), password);
+      router.push(postLoginDest(profile, returnTo));
       router.refresh();
     } catch (err) {
       setError(

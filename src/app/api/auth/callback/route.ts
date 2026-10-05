@@ -111,9 +111,16 @@ export async function GET(request: NextRequest) {
   const session = (await federated.json()) as {
     access_token: string;
     refresh_token: string;
+    assignment?: { role?: string } | null;
   };
 
-  const response = NextResponse.redirect(`${appBaseUrl()}${returnTo}`);
+  const dest =
+    returnTo === "/mis-reservas" &&
+    session.assignment?.role &&
+    session.assignment.role !== "GUEST"
+      ? "/admin"
+      : returnTo;
+  const response = NextResponse.redirect(`${appBaseUrl()}${dest}`);
   response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
   response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
   response.cookies.set("hs_oauth_verifier", "", { path: "/api/auth/callback", maxAge: 0 });
