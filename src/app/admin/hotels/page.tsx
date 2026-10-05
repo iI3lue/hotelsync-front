@@ -10,7 +10,7 @@ async function HotelsTable({ query }: { query?: string }) {
     hotels = await fetchHotels();
   } catch {
     return (
-      <p role="alert" className="text-red-600 dark:text-red-400">
+      <p role="alert" className="mx-auto w-full max-w-7xl px-4 py-8 text-red-600 dark:text-red-400">
         No se pudo cargar el catálogo. Verificá que el backend esté corriendo.
       </p>
     );
@@ -19,6 +19,7 @@ async function HotelsTable({ query }: { query?: string }) {
   const visible = filterHotels(hotels, query);
   if (visible.length === 0) {
     return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <div className="rounded-lg bg-white px-6 py-12 text-center shadow dark:bg-gray-800">
         <h2 className="mb-2 text-xl font-semibold text-balance">
           {query ? "Sin resultados para esta búsqueda" : "Todavía no hay hoteles"}
@@ -43,6 +44,7 @@ async function HotelsTable({ query }: { query?: string }) {
             Crear el primer hotel
           </Link>
         )}
+      </div>
       </div>
     );
   }
@@ -140,7 +142,7 @@ export default async function HotelsPage({
 }) {
   const { q } = await searchParams;
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-balance text-3xl font-bold">Hoteles</h1>
         <a

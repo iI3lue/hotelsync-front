@@ -10,6 +10,7 @@ const labelClass =
 
 export default function HotelForm() {
   const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [timezone, setTimezone] = useState("");
@@ -28,9 +29,16 @@ export default function HotelForm() {
     setError(null);
 
     try {
-      await createHotel({ name, city, country, timezone });
+      await createHotel({
+        name,
+        address: address.trim() || undefined,
+        city,
+        country,
+        timezone,
+      });
       setSuccess(true);
       setName("");
+      setAddress("");
       setCity("");
       setCountry("");
       setTimezone("");
@@ -78,6 +86,21 @@ export default function HotelForm() {
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
             required
+          />
+        </div>
+        <div>
+          <label htmlFor="hotel-address" className={labelClass}>
+            Dirección
+          </label>
+          <input
+            id="hotel-address"
+            name="hotel-address"
+            type="text"
+            autoComplete="street-address"
+            placeholder="Ej.: Av. Corrientes 1234…"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className={inputClass}
           />
         </div>
         <div>

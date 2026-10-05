@@ -26,7 +26,9 @@ async function fetchBookings(
   date: string,
   status: StatusFilter
 ): Promise<BookingRef[]> {
-  const params = new URLSearchParams({ hotel_id: hotelId, date });
+  const params = new URLSearchParams({ hotel_id: hotelId });
+  // Fecha vacía = todas las fechas (el backend deja `date` opcional).
+  if (date) params.set("date", date);
   if (status !== "all") params.set("status", status);
   const res = await fetch(`/api/booking/bookings?${params.toString()}`, {
     signal: AbortSignal.timeout(3000),
@@ -280,7 +282,7 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
                           onClick={() =>
                             persistHidden([...hiddenIds, b.booking_id])
                           }
-                          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
+                          className="rounded border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-700"
                         >
                           Quitar
                         </button>

@@ -8,12 +8,15 @@ export const metadata: Metadata = {
 
 export default function MyBookingsPage() {
   return (
-    <div>
-      <h1 className="mb-2 text-3xl font-bold">Mis reservas</h1>
-      <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">
-        Iniciá sesión con la cuenta que usaste al reservar (o el mismo correo)
-        para ver tus estadías.
-      </p>
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8">
+      <div className="border-b border-slate-100 pb-6 dark:border-brand-navy-800">
+        <h1 className="font-heading text-3xl font-extrabold text-brand-navy dark:text-white md:text-4xl">
+          Mis Reservas
+        </h1>
+        <p className="mt-2 text-slate-500 dark:text-slate-400">
+          Revisá el estado y las fechas de tus estadías confirmadas y pendientes.
+        </p>
+      </div>
       <MyBookings />
     </div>
   );

@@ -1,6 +1,5 @@
 import { fetchPhysicalRooms, fetchRoomTypes } from "@/lib/api";
 import PhysicalRoomForm from "@/components/PhysicalRoomForm";
-import Money from "@/components/Money";
 import RoomTypeForm from "@/components/RoomTypeForm";
 
 export default async function RoomTypesPage({
@@ -15,7 +14,7 @@ export default async function RoomTypesPage({
   ]);
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Tipos de habitación</h1>
 
       <div className="bg-white rounded-lg shadow p-6 mb-8 dark:bg-gray-800">
@@ -49,7 +48,7 @@ export default async function RoomTypesPage({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">{rt.capacity}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <Money amountCOP={rt.base_rate} />
+                  ${Number(rt.base_rate).toLocaleString("es-AR")}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {rt.amenities?.join(", ") || "—"}

@@ -2,40 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {  :root {
+/* ─── Base layer ────────────────────────────────────────────── */
+@layer base {
+  :root {
     color-scheme: light;
-  }
-
-  ::selection {
-    background-color: #2563eb;
-    color: #ffffff;
+    --brand-navy:   #0A1628;
+    --brand-gold:   #C9A84C;
+    --brand-cream:  #F5F0E8;
+    scroll-behavior: smooth;
   }
 
   .dark {
     color-scheme: dark;
   }
 
-  h1,
-  h2 {
-    text-wrap: balance;
+  *, *::before, *::after {
+    box-sizing: border-box;
   }
 
-  a,
-  button,
-  input,
-  select {
-    touch-action: manipulation;
+  html {
+    font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-brand-cream-700 dark:bg-brand-navy text-brand-navy dark:text-gray-50;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: var(--brand-gold);
+    color: var(--brand-navy);
   }
 
   :focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
+    outline: 2px solid var(--brand-gold);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  a, button, input, select {
+    touch-action: manipulation;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
+    *, *::before, *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
@@ -43,118 +59,218 @@
   }
 }
 
-/* Motion system (front-motion-pilot): transform/opacity only, 100-300ms. */
-@keyframes notice-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
+/* ─── Components ────────────────────────────────────────────── */
+@layer components {
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           bg-brand-gold px-6 py-3 text-sm font-semibold text-brand-navy
+           shadow-gold transition-all duration-200
+           hover:bg-brand-gold-300 hover:shadow-lg hover:-translate-y-0.5
+           active:scale-[0.97] active:translate-y-0
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white
+           backdrop-blur-sm transition-all duration-200
+           hover:bg-white/20 hover:-translate-y-0.5
+           active:scale-[0.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1;
   }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           px-4 py-2 text-sm font-medium text-brand-navy dark:text-gray-200
+           transition-all duration-150
+           hover:bg-brand-navy/10 dark:hover:bg-white/10
+           active:scale-[0.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl
+           border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700
+           transition-all duration-150 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300
+           hover:bg-red-100 dark:hover:bg-red-900/40
+           active:scale-[0.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500;
+  }
+
+  /* Press effect */
+  .btn-press {
+    transition: transform 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms ease;
+  }
+  .btn-press:active { transform: scale(0.97); }
+
+  /* Glass card */
+  .glass {
+    @apply rounded-2xl border border-white/10
+           bg-glass-gradient backdrop-blur-xl shadow-glass;
+  }
+
+  /* Premium card */
+  .card {
+    @apply rounded-2.5xl bg-white dark:bg-brand-navy-800
+           shadow-card transition-all duration-300
+           hover:shadow-card-hover hover:-translate-y-1;
+  }
+
+  /* Input premium */
+  .input-field {
+    @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-3
+           text-sm text-brand-navy placeholder-gray-400
+           transition-all duration-200
+           dark:border-white/10 dark:bg-brand-navy-700 dark:text-gray-100 dark:placeholder-gray-500
+           focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/20
+           hover:border-gray-300 dark:hover:border-white/20;
+  }
+
+  .input-label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gold-gradient bg-clip-text text-transparent;
+  }
+
+  /* Shimmer skeleton */
+  .skeleton {
+    @apply rounded-lg bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200
+           dark:from-brand-navy-800 dark:via-brand-navy-700 dark:to-brand-navy-800;
+    background-size: 400px 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  /* Nav link active indicator */
+  .nav-link {
+    @apply relative text-sm font-medium text-gray-600 dark:text-gray-300
+           transition-colors duration-150
+           hover:text-brand-navy dark:hover:text-white
+           after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0
+           after:rounded-full after:bg-brand-gold after:transition-all after:duration-200
+           hover:after:w-full;
+  }
+
+  /* Badge */
+  .badge-available {
+    @apply inline-flex items-center gap-1.5 rounded-full
+           bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700
+           dark:bg-emerald-950/50 dark:text-emerald-300;
+  }
+
+  .badge-pending {
+    @apply inline-flex items-center gap-1.5 rounded-full
+           bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700
+           dark:bg-amber-950/50 dark:text-amber-300;
+  }
+
+  /* Step indicator dot */
+  .step-dot {
+    @apply flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold
+           transition-all duration-300;
+  }
+
+  .step-dot-active   { @apply bg-brand-gold text-brand-navy shadow-gold; }
+  .step-dot-done     { @apply bg-emerald-500 text-white; }
+  .step-dot-inactive { @apply bg-gray-200 text-gray-500 dark:bg-brand-navy-700 dark:text-gray-400; }
+
+  /* Section heading */
+  .section-title {
+    @apply font-display text-3xl font-semibold tracking-tight text-brand-navy dark:text-gray-50
+           md:text-4xl;
+  }
+}
+
+/* ─── Utilities ─────────────────────────────────────────────── */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  /* Noise texture overlay */
+  .noise::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* Scroll snap */
+  .snap-x-mandatory { scroll-snap-type: x mandatory; }
+  .snap-start       { scroll-snap-align: start; }
+}
+
+/* ─── Keyframes ─────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
 }
 
 @keyframes check-draw {
-  from {
-    stroke-dashoffset: 48;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes day-in {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes notice-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0;  }
 }
 
 @keyframes hero-in {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-    filter: blur(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
+  from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes notice-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-@layer components {
-  .btn-press {
-    transition:
-      transform 150ms cubic-bezier(0.16, 1, 0.3, 1),
-      background-color 150ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .btn-press:active {
-    transform: scale(0.98);
-  }
-  .animate-hero-in {
-    animation: hero-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .animate-notice-in {
-    animation: notice-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .animate-check-draw {
-    stroke-dasharray: 48;
-    animation: check-draw 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .animate-day-in {
-    animation: day-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .animate-spin-slow {
-    animation: spin 800ms linear infinite;
-  }
+@keyframes notice-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
+
+@keyframes day-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Legacy animate classes (keep backward compat) ────────── */
+.animate-hero-in    { animation: hero-in    600ms cubic-bezier(0.16,1,0.3,1) both; }
+.animate-notice-in  { animation: notice-in  150ms cubic-bezier(0.16,1,0.3,1) both; }
+.animate-check-draw { stroke-dasharray: 48; animation: check-draw 500ms cubic-bezier(0.16,1,0.3,1) both; }
+.animate-day-in     { animation: day-in     150ms cubic-bezier(0.16,1,0.3,1) both; }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Opacity-only fallback: feedback stays legible, no spatial movement. */
   .animate-notice-in,
   .animate-hero-in,
-  .animate-day-in {
-    animation-name: notice-fade;
-    animation-duration: 150ms;
-  }
-  .animate-check-draw {
-    animation: none;
-    stroke-dashoffset: 0;
-  }
-  .btn-press:active {
-    transform: none;
-  }
+  .animate-day-in   { animation-name: notice-fade; animation-duration: 150ms; }
+  .animate-check-draw { animation: none; stroke-dashoffset: 0; }
+  .btn-press:active   { transform: none; }
 }
 
-/* Calendario de disponibilidad: días con stock en verde. */
+/* ─── Calendar overrides ───────────────────────────────────── */
 .cal-available:not(.rdp-day_selected) {
-  color: #15803d;
+  color: #059669;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
-  animation: day-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: day-in 150ms cubic-bezier(0.16,1,0.3,1) both;
 }
-.dark .cal-available:not(.rdp-day_selected) {
-  color: #4ade80;
+.dark .cal-available:not(.rdp-day_selected) { color: #34d399; }
+
+/* rdp overrides to match our theme */
+.rdp-button:hover:not(.rdp-day_selected) {
+  background-color: rgba(201,168,76,0.12) !important;
+  color: #0A1628 !important;
+}
+.dark .rdp-button:hover:not(.rdp-day_selected) {
+  background-color: rgba(201,168,76,0.15) !important;
+  color: #fff !important;
+}
+.rdp-day_selected {
+  background-color: #C9A84C !important;
+  color: #0A1628 !important;
+  font-weight: 700 !important;
 }

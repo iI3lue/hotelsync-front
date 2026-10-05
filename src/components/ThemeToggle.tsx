@@ -57,17 +57,11 @@ export default function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  const buttonClass =
-    "inline-flex items-center gap-2 rounded border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700 dark:focus-visible:ring-offset-gray-900";
+  const btnCls =
+    "flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition-all duration-150 hover:bg-brand-navy/8 hover:text-brand-navy dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold";
 
-  // Placeholder del mismo tamaño para evitar saltos de layout antes de hidratar.
   if (!mounted) {
-    return (
-      <span className={buttonClass} aria-hidden="true">
-        <span className="inline-block h-[18px] w-[18px]" />
-        <span className="inline-block h-4 w-14" />
-      </span>
-    );
+    return <span className={btnCls} aria-hidden="true"><span className="h-4 w-4" /></span>;
   }
 
   const current: ThemeChoice =
@@ -78,12 +72,12 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={() => setTheme(next)}
-      className={buttonClass}
+      className={btnCls}
       aria-label={`Cambiar tema (actual: ${LABELS[current]}). Cambiar a ${LABELS[next].toLowerCase()}`}
       title={`Tema: ${LABELS[current]}`}
     >
       <ThemeIcon theme={current} />
-      <span>{LABELS[current]}</span>
     </button>
   );
 }
+

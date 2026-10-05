@@ -58,13 +58,14 @@ const QUICK_FILTERS = ["wifi", "piscina", "desayuno", "vista al mar"];
 function StayBadge({ status }: { status: StayAvailability }) {
   if (status === "available") {
     return (
-      <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-800 dark:bg-green-900/40 dark:text-green-200">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
         Disponible para tus fechas
       </span>
     );
   }
   return (
-    <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 dark:border-brand-navy-700 dark:bg-brand-navy-900 dark:text-slate-300">
       Disponibilidad a confirmar
     </span>
   );
@@ -149,10 +150,10 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
               key={filter}
               href={toggleAmenityUrl(params, filter)}
               aria-pressed={isActive}
-              className={`rounded-full border px-3 py-1.5 text-sm font-medium capitalize transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 ${
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold capitalize transition-all duration-200 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold ${
                 isActive
-                  ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                  ? "border-brand-gold bg-brand-gold text-brand-navy shadow-sm hover:brightness-105"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-brand-gold/60 hover:text-brand-navy dark:border-brand-navy-700 dark:bg-brand-navy-800 dark:text-slate-200 dark:hover:border-brand-gold/60"
               }`}
             >
               {isActive ? `${filter} ✕` : filter}
@@ -162,7 +163,7 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
         {params.amenity || params.city || params.guests || params.from ? (
           <a
             href="/buscar"
-            className="rounded-full px-3 py-1.5 text-sm font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
+            className="rounded-full px-3 py-1.5 text-xs font-semibold text-brand-gold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
           >
             Limpiar filtros
           </a>
@@ -172,49 +173,51 @@ async function BuscarResults({ params }: { params: BuscarParams }) {
       {canCheckStay ? (
         <div
           role="status"
-          className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-100"
+          className="mb-4 flex items-center justify-between rounded-xl border border-brand-gold/30 bg-amber-50/60 px-4 py-3 text-sm text-brand-navy dark:border-brand-gold/20 dark:bg-brand-navy-800/80 dark:text-slate-200"
         >
-          Disponibilidad consultada para tu estancia.
+          <span>Disponibilidad consultada para tu estancia.</span>
           <a
             href={clearDatesUrl(params)}
-            className="ml-2 font-medium underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="font-semibold text-brand-gold underline underline-offset-2 hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
           >
             Quitar fechas
           </a>
         </div>
       ) : null}
 
-      <p role="status" className="mb-4 text-sm text-gray-600 tabular-nums dark:text-gray-300">
-        {visible.length === 0
-          ? "Sin resultados"
-          : visible.length === 1
-            ? "1 hotel encontrado"
-            : `${visible.length} hoteles encontrados`}
-        {params.city ? ` para “${params.city}”` : ""}
-        {params.from ? ` · desde ${params.from}` : ""}
-        {params.to ? ` · hasta ${params.to}` : ""}
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4 dark:border-brand-navy-800">
+        <p role="status" className="text-sm font-medium text-slate-500 tabular-nums dark:text-slate-400">
+          {visible.length === 0
+            ? "Sin resultados"
+            : visible.length === 1
+              ? "1 hotel encontrado"
+              : `${visible.length} hoteles encontrados`}
+          {params.city ? ` para “${params.city}”` : ""}
+          {params.from ? ` · desde ${params.from}` : ""}
+          {params.to ? ` · hasta ${params.to}` : ""}
+        </p>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Ordenar">
-        <span className="text-sm text-gray-600 dark:text-gray-300">Ordenar:</span>
-        {[
-          { value: "relevance", label: "Relevancia" },
-          { value: "price-asc", label: "Precio: menor a mayor" },
-          { value: "price-desc", label: "Precio: mayor a menor" },
-        ].map((o) => (
-          <a
-            key={o.value}
-            href={sortUrl(params, o.value)}
-            aria-pressed={sort === o.value}
-            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors touch-manipulation ${
-              sort === o.value
-                ? "border-blue-600 bg-blue-600 text-white"
-                : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-            }`}
-          >
-            {o.label}
-          </a>
-        ))}
+        <div className="flex flex-wrap items-center gap-2" aria-label="Ordenar">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Ordenar:</span>
+          {[
+            { value: "relevance", label: "Relevancia" },
+            { value: "price-asc", label: "Precio: menor a mayor" },
+            { value: "price-desc", label: "Precio: mayor a menor" },
+          ].map((o) => (
+            <a
+              key={o.value}
+              href={sortUrl(params, o.value)}
+              aria-pressed={sort === o.value}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 touch-manipulation ${
+                sort === o.value
+                  ? "border-brand-navy bg-brand-navy text-white shadow-sm dark:border-brand-gold dark:bg-brand-gold dark:text-brand-navy font-semibold"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-brand-navy-700 dark:bg-brand-navy-800 dark:text-slate-200 dark:hover:bg-brand-navy-700"
+              }`}
+            >
+              {o.label}
+            </a>
+          ))}
+        </div>
       </div>
 
       {visible.length === 0 ? (
@@ -280,13 +283,17 @@ export default async function BuscarPage({
 }) {
   const params = await searchParams;
   return (
-    <div>
-      <h1 className="mb-2 text-balance text-3xl font-bold">Buscar hoteles</h1>
-      <p className="mb-6 max-w-2xl break-words text-gray-600 dark:text-gray-300">
-        Filtrá por destino, fechas y huéspedes. La URL guarda tu búsqueda para
-        compartirla o volver atrás sin perderla.
-      </p>
-      <div className="mb-8">
+    <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8">
+      <div>
+        <h1 className="font-heading text-3xl font-extrabold text-brand-navy dark:text-white md:text-4xl">
+          Explorá Hoteles
+        </h1>
+        <p className="mt-2 text-slate-500 dark:text-slate-400">
+          Filtrá por destino, fechas y huéspedes con tarifas en tiempo real garantizadas.
+        </p>
+      </div>
+
+      <div className="rounded-2.5xl border border-slate-200/80 bg-white p-2 shadow-card dark:border-brand-navy-700/80 dark:bg-brand-navy-800">
         <SearchBar
           initialCity={params.city ?? ""}
           initialFrom={params.from ?? ""}
@@ -294,6 +301,7 @@ export default async function BuscarPage({
           initialGuests={params.guests ?? "2"}
         />
       </div>
+
       <Suspense fallback={<SkeletonGrid />}>
         <BuscarResults params={params} />
       </Suspense>

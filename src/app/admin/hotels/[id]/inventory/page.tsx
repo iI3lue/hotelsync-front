@@ -24,7 +24,7 @@ export default async function InventoryPage({
   }
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Gestión de inventario</h1>
       <p className="text-gray-600 mb-4 dark:text-gray-300">
         Disponibilidad y bloqueos de <strong>{hotelName}</strong> por

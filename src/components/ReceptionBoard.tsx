@@ -2,11 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BookingRef, PhysicalRoom } from "@/lib/api";
-import {
-  fetchAssignment,
-  fetchPhysicalRooms,
-  postJson,
-} from "@/lib/api-client";
+import { fetchAssignment, fetchPhysicalRooms, postJson } from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
 import HousekeepingStatus from "@/components/HousekeepingStatus";
 import InvoicePanel from "@/components/InvoicePanel";

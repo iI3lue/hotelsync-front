@@ -38,6 +38,7 @@ const FRONT_DESK_API = process.env.NEXT_PUBLIC_FRONT_DESK_API_URL || "http://loc
 export interface Hotel {
   hotel_id: string;
   name: string;
+  address?: string | null;
   city: string;
   country: string;
   timezone: string;
@@ -52,6 +53,7 @@ export interface RoomType {
   capacity: number;
   base_rate: number;
   amenities: string[];
+  image_url?: string | null;
 }
 
 export interface PhysicalRoom {

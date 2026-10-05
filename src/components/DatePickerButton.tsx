@@ -5,6 +5,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
 import { es } from "react-day-picker/locale";
 import { formatShort, fromIsoDate, toIsoDate } from "@/lib/dates";
+import Popover from "@/components/Popover";
 
 const buttonClass =
   "w-full rounded border border-gray-300 bg-white px-3 py-2 text-left text-gray-900 touch-manipulation dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100";
@@ -21,6 +22,10 @@ interface DatePickerButtonProps {
   id?: string;
   /** Si se pasa, renderiza un hidden input para formularios GET clásicos. */
   name?: string;
+  /** Compact mode: hide label, use inline text trigger (for SearchBar). */
+  compact?: boolean;
+  /** Hero mode: white text on dark background trigger. */
+  heroMode?: boolean;
 }
 
 /**
@@ -36,6 +41,8 @@ export default function DatePickerButton({
   minDate,
   id,
   name,
+  compact = false,
+  heroMode = false,
 }: DatePickerButtonProps) {
   const [inner, setInner] = useState(value ?? defaultValue);
   const [open, setOpen] = useState(false);
@@ -50,16 +57,9 @@ export default function DatePickerButton({
     if (value !== undefined) setInner(value);
   }, [value]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: PointerEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("pointerdown", onDown);
-    return () => document.removeEventListener("pointerdown", onDown);
-  }, [open ]);
+  // El cierre por clic afuera/Escape lo maneja el Popover portal.
+  // (Un listener propio cerraría en `pointerdown`, antes de que el clic
+  // en un día del calendario llegue a dispararse.)
 
   const pick = (iso: string) => {
     if (onChange) onChange(iso);
@@ -67,28 +67,40 @@ export default function DatePickerButton({
     setOpen(false);
   };
 
+  const triggerClass = compact
+    ? heroMode
+      ? "bg-transparent text-sm font-medium text-white placeholder-blue-100/40 outline-none cursor-pointer w-full text-left"
+      : "bg-transparent text-sm font-medium text-brand-navy outline-none cursor-pointer w-full text-left dark:text-white"
+    : buttonClass;
+
   return (
-    <div ref={boxRef} className="relative min-w-0">
-      <span id={id ? `${id}-label` : undefined} className={labelClass}>
-        {label}
-      </span>
+    <div ref={boxRef} className="relative min-w-0 w-full">
+      {!compact && (
+        <span id={id ? `${id}-label` : undefined} className={labelClass}>
+          {label}
+        </span>
+      )}
       {name ? <input type="hidden" name={name} value={current} /> : null}
       <button
         type="button"
         id={id}
-        aria-labelledby={id ? `${id}-label` : undefined}
+        aria-label={compact ? label : undefined}
+        aria-labelledby={!compact && id ? `${id}-label` : undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className={buttonClass}
+        className={triggerClass}
       >
-        {current ? formatShort(current) : "Elegir fecha…"}
+        {current
+          ? <span className={heroMode ? "text-white" : "text-brand-navy dark:text-white"}>{formatShort(current)}</span>
+          : <span className={heroMode ? "text-blue-200/50" : "text-gray-400"}>Elegir fecha…</span>
+        }
       </button>
-      {open ? (
+      <Popover anchorRef={boxRef} open={open} onClose={() => setOpen(false)}>
         <div
           role="dialog"
           aria-label={label}
-          className="absolute z-30 mt-1 rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+          className="rounded-2xl border border-gray-200 bg-white p-3 shadow-elevated dark:border-white/10 dark:bg-brand-navy-800"
         >
           <DayPicker
             mode="single"
@@ -108,7 +120,7 @@ export default function DatePickerButton({
             endMonth={new Date(today.getFullYear() + 1, today.getMonth(), 1)}
           />
         </div>
-      ) : null}
+      </Popover>
     </div>
   );
 }

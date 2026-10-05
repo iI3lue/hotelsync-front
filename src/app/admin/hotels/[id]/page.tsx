@@ -9,7 +9,7 @@ export default async function HotelDetailPage({
   const hotel = await fetchHotelById(id);
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <h1 className="text-3xl font-bold mb-4">{hotel.name}</h1>
       <div className="bg-white rounded-lg shadow p-6 mb-6 dark:bg-gray-800">
         <p className="text-gray-600 dark:text-gray-300">

@@ -18,10 +18,39 @@ import { authHeader } from "./auth-client";
  * (documento de arquitectura §6.5). Si hay sesión, se adjunta el Bearer.
  */
 
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch("/api/auth/refresh", {
+      method: "POST",
+      signal: AbortSignal.timeout(5000),
+    })
+      .then((response) => response.ok)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
+async function fetchWithSession(
+  url: string,
+  init: Omit<RequestInit, "signal"> = {}
+): Promise<Response> {
+  const send = () =>
+    fetch(url, { ...init, signal: AbortSignal.timeout(3000) });
+  const first = await send();
+  if (first.status !== 401 || !(await refreshSession())) return first;
+  // A retry is safe: authenticated routes reject a missing/expired Bearer
+  // before running their controller, so the original operation did not run.
+  return send();
+}
+
 async function clientFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetchWithSession(url, {
     headers: { ...authHeader() },
-    signal: AbortSignal.timeout(3000),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -32,12 +61,19 @@ async function clientFetch<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function clientPost<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+export async function clientPost<T>(
+  url: string,
+  body: unknown,
+  headers: Record<string, string> = {}
+): Promise<T> {
+  const res = await fetchWithSession(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeader() },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(),
+      ...headers,
+    },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(3000),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -60,6 +96,7 @@ export async function fetchRoomTypes(hotelId: string): Promise<RoomType[]> {
 
 export async function createHotel(data: {
   name: string;
+  address?: string;
   city: string;
   country: string;
   timezone: string;
@@ -73,8 +110,16 @@ export async function createRoomType(data: {
   capacity: number;
   base_rate: number;
   amenities: string[];
+  image_url?: string;
 }): Promise<RoomType> {
   return clientPost<RoomType>("/api/property/room-types", data);
+}
+
+export async function updateRoomType(
+  id: string,
+  data: Partial<Pick<RoomType, "name" | "capacity" | "base_rate" | "amenities" | "image_url">>
+): Promise<RoomType> {
+  return putJson<RoomType>(`/api/property/room-types/${encodeURIComponent(id)}`, data);
 }
 
 export async function fetchMyBookings(): Promise<import("./api").Booking[]> {
@@ -197,8 +242,12 @@ export async function blockInventory(data: {
 }
 
 /** POST genérico para acciones (check-in/out, confirm/cancel, etc.). */
-export async function postJson<T>(url: string, body: unknown): Promise<T> {
-  return clientPost<T>(url, body);
+export async function postJson<T>(
+  url: string,
+  body: unknown,
+  headers: Record<string, string> = {}
+): Promise<T> {
+  return clientPost<T>(url, body, headers);
 }
 
 export async function fetchHotelByIdClient(hotelId: string): Promise<Hotel> {

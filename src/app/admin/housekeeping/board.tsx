@@ -155,7 +155,7 @@ export default function HousekeepingBoard({
   };
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <h1 className="mb-2 text-3xl font-bold">Limpieza</h1>
       <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">
         {hotelId

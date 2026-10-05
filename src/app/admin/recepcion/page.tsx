@@ -33,18 +33,30 @@ export default async function RecepcionPage({
   }
 
   const effectiveHotel = hotel_id || hotels[0]?.hotel_id || "";
-  const effectiveDate = date || todayIso();
+  // Fecha vacía = "todas las fechas" (solo aplica al tab Reservas;
+  // Llegadas es vista-día y usa hoy como fallback).
+  const effectiveDate = date || "";
+  const boardDate = effectiveDate || todayIso();
   const activeTab = tab === "llegadas" ? "llegadas" : "reservas";
-  const ready = Boolean(effectiveHotel && effectiveDate);
+  const ready = Boolean(effectiveHotel);
 
   const baseParams = new URLSearchParams();
   if (effectiveHotel) baseParams.set("hotel_id", effectiveHotel);
   if (effectiveDate) baseParams.set("date", effectiveDate);
   const reservasHref = `/admin/recepcion?${new URLSearchParams({ ...Object.fromEntries(baseParams), tab: "reservas" }).toString()}`;
   const llegadasHref = `/admin/recepcion?${new URLSearchParams({ ...Object.fromEntries(baseParams), tab: "llegadas" }).toString()}`;
+  const allDatesHref = `/admin/recepcion?${new URLSearchParams({
+    ...(effectiveHotel ? { hotel_id: effectiveHotel } : {}),
+    tab: activeTab,
+  }).toString()}`;
+  const todayHref = `/admin/recepcion?${new URLSearchParams({
+    ...(effectiveHotel ? { hotel_id: effectiveHotel } : {}),
+    date: todayIso(),
+    tab: activeTab,
+  }).toString()}`;
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <h1 className="mb-2 text-3xl font-bold">Recepción</h1>
       <p className="mb-6 max-w-2xl break-words text-gray-600 dark:text-gray-300">
         Reservas automáticas desde Booking Service (pending incluidas) y llegadas
@@ -100,6 +112,21 @@ export default async function RecepcionPage({
         >
           Filtrar
         </button>
+        {effectiveDate ? (
+          <a
+            href={allDatesHref}
+            className="ml-3 mt-4 inline-block rounded px-2 py-2 text-sm font-medium text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
+          >
+            Ver todas las fechas
+          </a>
+        ) : (
+          <span className="ml-3 mt-4 inline-block rounded bg-blue-50 px-2 py-2 text-sm font-medium text-blue-800 dark:bg-blue-950/40 dark:text-blue-300">
+            Todas las fechas ·{" "}
+            <a href={todayHref} className="underline underline-offset-2 hover:no-underline">
+              volver a hoy
+            </a>
+          </span>
+        )}
       </form>
 
       {!ready ? (
@@ -138,7 +165,7 @@ export default async function RecepcionPage({
           {activeTab === "reservas" ? (
             <BookingsAutoTable hotelId={effectiveHotel} date={effectiveDate} />
           ) : (
-            <ReceptionBoard hotelId={effectiveHotel} date={effectiveDate} />
+            <ReceptionBoard hotelId={effectiveHotel} date={boardDate} />
           )}
         </div>
       )}

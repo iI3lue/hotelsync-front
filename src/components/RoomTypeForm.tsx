@@ -13,6 +13,7 @@ export default function RoomTypeForm({ hotelId }: { hotelId: string }) {
   const [capacity, setCapacity] = useState(2);
   const [baseRate, setBaseRate] = useState(0);
   const [amenities, setAmenities] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -33,12 +34,14 @@ export default function RoomTypeForm({ hotelId }: { hotelId: string }) {
         capacity,
         base_rate: baseRate,
         amenities: amenitiesList,
+        image_url: imageUrl.trim() || undefined,
       });
       setSuccess(true);
       setName("");
       setCapacity(2);
       setBaseRate(0);
       setAmenities("");
+      setImageUrl("");
     } catch (err) {
       console.error(err);
       setError(
@@ -121,6 +124,19 @@ export default function RoomTypeForm({ hotelId }: { hotelId: string }) {
             value={amenities}
             onChange={(e) => setAmenities(e.target.value)}
             placeholder="wifi, tv, aire acondicionado"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label htmlFor="roomtype-image" className={labelClass}>
+            Foto (URL)
+          </label>
+          <input
+            id="roomtype-image"
+            type="url"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://images.unsplash.com/…"
             className={inputClass}
           />
         </div>
