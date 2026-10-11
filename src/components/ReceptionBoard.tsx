@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { BookingRef, PhysicalRoom } from "@/lib/api";
 import { fetchAssignment, fetchPhysicalRooms, postJson } from "@/lib/api-client";
 import { useRoomNames } from "@/lib/use-room-names";
+import { timeoutSignal } from "@/lib/timeout-signal";
 import HousekeepingStatus from "@/components/HousekeepingStatus";
 import InvoicePanel from "@/components/InvoicePanel";
 
@@ -38,7 +39,7 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
       try {
         const res = await fetch(
           `/api/front-desk/arrivals?hotel_id=${encodeURIComponent(hotelId)}&date=${encodeURIComponent(date)}`,
-          { signal: AbortSignal.timeout(3000) }
+          { signal: timeoutSignal(10000) }
         );
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));

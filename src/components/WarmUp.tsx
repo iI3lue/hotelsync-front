@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { timeoutSignal } from "@/lib/timeout-signal";
 
 const STORAGE_KEY = "hotelsync-warmed-up";
 
@@ -31,7 +32,7 @@ export default function WarmUp() {
       // Sin sessionStorage igual se dispara una vez por montaje.
     }
     for (const url of HEALTH_URLS) {
-      fetch(url, { signal: AbortSignal.timeout(10000) }).catch(() => {
+      fetch(url, { signal: timeoutSignal(10000) }).catch(() => {
         // Silencioso a propósito: es solo un despertador.
       });
     }

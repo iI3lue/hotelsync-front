@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Booking, BookingCreated, RoomType } from "@/lib/api";
-import { postJson } from "@/lib/api-client";
+import { LONG_TIMEOUT_MS, postJson } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import Money from "@/components/Money";
 import { useCurrency } from "@/components/CurrencyProvider";
@@ -316,7 +316,11 @@ export default function BookingForm({
         channel: "direct",
         total_amount: total,
         guest: { name: guestName.trim(), email: guestEmail.trim(), phone: guestPhone.trim() },
-      });
+      },
+      {},
+      // Sin reintento (POST no idempotente) pero con timeout largo: el
+      // booking dormido en free tier tarda en despertar.
+      { timeoutMs: LONG_TIMEOUT_MS });
       setBooking(created);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "No se pudo crear la reserva";

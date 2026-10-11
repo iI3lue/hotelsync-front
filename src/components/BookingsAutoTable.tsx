@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import type { BookingRef } from "@/lib/api";
 import { postJson } from "@/lib/api-client";
+import { timeoutSignal } from "@/lib/timeout-signal";
 import { useRoomNames } from "@/lib/use-room-names";
 
 interface BookingsAutoTableProps {
@@ -31,7 +32,7 @@ async function fetchBookings(
   if (date) params.set("date", date);
   if (status !== "all") params.set("status", status);
   const res = await fetch(`/api/booking/bookings?${params.toString()}`, {
-    signal: AbortSignal.timeout(3000),
+    signal: timeoutSignal(10000),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

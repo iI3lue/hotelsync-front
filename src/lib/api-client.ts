@@ -8,15 +8,37 @@ import type {
   RoomType,
 } from "./api";
 import { authHeader } from "./auth-client";
+import {
+  backoffDelay,
+  isRetryableError,
+  timeoutSignal,
+} from "./timeout-signal";
 
 /**
  * Capa de acceso a datos para Client Components.
  *
  * A diferencia de `@/lib/api` (server-only: URLs directas al backend +
  * `cache` de React), estas funciones pegan a los rewrites `/api/*` de
- * Next (mismo origen, sin CORS) y aplican timeout de 3s por llamada
- * (documento de arquitectura §6.5). Si hay sesión, se adjunta el Bearer.
+ * Next (mismo origen, sin CORS).
+ *
+ * Resiliencia para wifi inestable y backends free que despiertan lento:
+ * - Timeout 10s por defecto (30s en operaciones largas: disponibilidad
+ *   por rango y reserva, que despiertan al R&A/booking dormidos).
+ * - 1 reintento con backoff+jitter en GETs ante fallo de red/timeout.
+ *   POST/PUT nunca se reintentan (evita doble reserva/cargo).
+ * - `timeoutSignal` con fallback para iPhones viejos sin
+ *   `AbortSignal.timeout` (Baseline 2024).
  */
+
+export interface RequestOptions {
+  /** Timeout por intento en ms. GET: 10000, operaciones largas: 30000. */
+  timeoutMs?: number;
+  /** Reintentos ante fallo de red/timeout. Solo GET/HEAD (defecto 1). */
+  retries?: number;
+}
+
+const DEFAULT_TIMEOUT_MS = 10_000;
+export const LONG_TIMEOUT_MS = 30_000;
 
 let refreshInFlight: Promise<boolean> | null = null;
 
@@ -24,7 +46,7 @@ function refreshSession(): Promise<boolean> {
   if (!refreshInFlight) {
     refreshInFlight = fetch("/api/auth/refresh", {
       method: "POST",
-      signal: AbortSignal.timeout(5000),
+      signal: timeoutSignal(5000),
     })
       .then((response) => response.ok)
       .catch(() => false)
@@ -35,23 +57,50 @@ function refreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-async function fetchWithSession(
-  url: string,
-  init: Omit<RequestInit, "signal"> = {}
-): Promise<Response> {
-  const send = () =>
-    fetch(url, { ...init, signal: AbortSignal.timeout(3000) });
-  const first = await send();
-  if (first.status !== 401 || !(await refreshSession())) return first;
-  // A retry is safe: authenticated routes reject a missing/expired Bearer
-  // before running their controller, so the original operation did not run.
-  return send();
+function isIdempotent(init: Omit<RequestInit, "signal">): boolean {
+  const method = (init.method ?? "GET").toUpperCase();
+  return method === "GET" || method === "HEAD";
 }
 
-async function clientFetch<T>(url: string): Promise<T> {
-  const res = await fetchWithSession(url, {
-    headers: { ...authHeader() },
-  });
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithSession(
+  url: string,
+  init: Omit<RequestInit, "signal"> = {},
+  opts: RequestOptions = {}
+): Promise<Response> {
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  // Solo GET/HEAD se reintentan: un POST reintentado duplicaría la
+  // operación (doble reserva, doble cargo) si el primero sí llegó.
+  const maxRetries = opts.retries ?? (isIdempotent(init) ? 1 : 0);
+  let attempt = 0;
+  for (;;) {
+    const send = () =>
+      fetch(url, { ...init, signal: timeoutSignal(timeoutMs) });
+    try {
+      const first = await send();
+      if (first.status !== 401 || !(await refreshSession())) return first;
+      // A retry is safe: authenticated routes reject a missing/expired Bearer
+      // before running their controller, so the original operation did not run.
+      return send();
+    } catch (err) {
+      if (attempt >= maxRetries || !isRetryableError(err)) throw err;
+      attempt += 1;
+      await sleep(backoffDelay(attempt - 1));
+    }
+  }
+}
+
+async function clientFetch<T>(url: string, opts: RequestOptions = {}): Promise<T> {
+  const res = await fetchWithSession(
+    url,
+    {
+      headers: { ...authHeader() },
+    },
+    opts
+  );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(
@@ -64,17 +113,24 @@ async function clientFetch<T>(url: string): Promise<T> {
 export async function clientPost<T>(
   url: string,
   body: unknown,
-  headers: Record<string, string> = {}
+  headers: Record<string, string> = {},
+  opts: RequestOptions = {}
 ): Promise<T> {
-  const res = await fetchWithSession(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeader(),
-      ...headers,
+  const res = await fetchWithSession(
+    url,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+        ...headers,
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    // Los POST nunca se reintentan (ver fetchWithSession); solo se les
+    // puede dar más timeout para backends dormidos.
+    { ...opts, retries: 0 }
+  );
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(
@@ -175,7 +231,7 @@ async function putJson<T>(url: string, body: unknown): Promise<T> {
     method: "PUT",
     headers: { "Content-Type": "application/json", ...authHeader() },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(3000),
+    signal: timeoutSignal(DEFAULT_TIMEOUT_MS),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -214,7 +270,9 @@ export async function fetchAvailability(
   date: string
 ): Promise<Availability> {
   return clientFetch<Availability>(
-    `/api/rate/availability?room_type_id=${encodeURIComponent(roomTypeId)}&date=${encodeURIComponent(date)}`
+    `/api/rate/availability?room_type_id=${encodeURIComponent(roomTypeId)}&date=${encodeURIComponent(date)}`,
+    // Despierta al R&A dormido: operación larga de lectura.
+    { timeoutMs: LONG_TIMEOUT_MS }
   );
 }
 
@@ -228,7 +286,9 @@ export async function fetchAvailabilityRange(
   to: string
 ): Promise<Record<string, Availability>> {
   return clientFetch<Record<string, Availability>>(
-    `/api/rate/availability/range?room_type_id=${encodeURIComponent(roomTypeId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+    `/api/rate/availability/range?room_type_id=${encodeURIComponent(roomTypeId)}&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    // Despierta al R&A dormido: operación larga de lectura.
+    { timeoutMs: LONG_TIMEOUT_MS }
   );
 }
 
@@ -245,9 +305,10 @@ export async function blockInventory(data: {
 export async function postJson<T>(
   url: string,
   body: unknown,
-  headers: Record<string, string> = {}
+  headers: Record<string, string> = {},
+  opts: RequestOptions = {}
 ): Promise<T> {
-  return clientPost<T>(url, body, headers);
+  return clientPost<T>(url, body, headers, opts);
 }
 
 export async function fetchHotelByIdClient(hotelId: string): Promise<Hotel> {

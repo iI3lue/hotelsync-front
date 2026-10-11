@@ -16,6 +16,7 @@ import {
   type Currency,
 } from "@/lib/format";
 import type { RatesPayload } from "@/lib/rates";
+import { timeoutSignal } from "@/lib/timeout-signal";
 
 const STORAGE_KEY = "hotelsync-currency";
 const POLL_INTERVAL_MS = 10 * 60 * 1000;
@@ -65,7 +66,10 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     async function loadRates() {
       try {
-        const res = await fetch("/api/rates", { cache: "no-store" });
+        const res = await fetch("/api/rates", {
+          cache: "no-store",
+          signal: timeoutSignal(10000),
+        });
         if (!res.ok) return;
         const data = (await res.json()) as Partial<RatesPayload>;
         if (cancelled || !data.rates) return;

@@ -34,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap"
         />
       </head>
-      <body className="min-h-screen bg-brand-cream-700 dark:bg-brand-navy antialiased">
+      <body className="min-h-screen min-h-dvh bg-brand-cream-700 dark:bg-brand-navy antialiased">
         <a
           href="#contenido"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-gold focus:px-4 focus:py-2 focus:text-brand-navy focus:font-semibold"
@@ -48,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <WarmUp />
           <NavbarClient />
 
-          <main id="contenido" className="min-h-[calc(100vh-72px)]">
+          <main id="contenido" className="min-h-[calc(100vh-72px)] min-h-[calc(100dvh-72px)]">
             {children}
           </main>
 
