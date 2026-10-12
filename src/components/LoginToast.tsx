@@ -7,8 +7,9 @@ import { useToast } from "@/components/Toast";
 
 /**
  * Muestra el toast post-login una sola vez cuando la URL trae
- * `?login=google` (el callback OAuth redirige con ese marcador) y
- * después limpia el parámetro sin recargar.
+ * `?login=google` o `?login=email` (el callback OAuth y el login con
+ * contraseña redirigen con ese marcador, con recarga completa para que
+ * toda la UI vea la sesión nueva) y después limpia el parámetro.
  */
 export default function LoginToast() {
   const params = useSearchParams();
@@ -18,11 +19,14 @@ export default function LoginToast() {
   const done = useRef(false);
 
   useEffect(() => {
-    if (done.current || params.get("login") !== "google") return;
+    const via = params.get("login");
+    if (done.current || (via !== "google" && via !== "email")) return;
     done.current = true;
     void me().then((profile) => {
       success(
-        "Sesión iniciada con Google",
+        via === "google"
+          ? "Sesión iniciada con Google"
+          : "Inicio de sesión exitoso",
         profile ? profile.email : undefined
       );
     });

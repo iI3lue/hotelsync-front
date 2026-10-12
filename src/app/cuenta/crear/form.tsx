@@ -125,8 +125,8 @@ export default function CreateForm({
     setError(null);
     try {
       await register({ name: name.trim(), email: email.trim(), password });
-      router.push(returnTo);
-      router.refresh();
+      // Recarga completa: la UI monta de cero con la sesión nueva.
+      window.location.href = returnTo;
     } catch (err) {
       setError(
         err instanceof Error
