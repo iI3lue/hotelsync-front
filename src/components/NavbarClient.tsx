@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { logout, me, type AuthProfile } from "@/lib/auth-client";
+import { useViewAs } from "@/lib/view-as";
+import ViewAsSelector from "@/components/ViewAsSelector";
+import ViewingAsBanner from "@/components/ViewingAsBanner";
 import CurrencySelector from "@/components/CurrencySelector";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -116,6 +119,15 @@ export default function NavbarClient() {
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { viewAs, viewedRole, setViewAs } = useViewAs(profile?.role ?? null);
+
+  // "Ver como…" es solo renderizado: el personal simulado ve un acceso a
+  // Administrar (filtrado por sección en el admin), el invitado no lo ve.
+  // El backend sigue mandando con la sesión real.
+  const navLinks =
+    viewedRole !== "GUEST" && viewedRole !== "SUPER_ADMIN"
+      ? [...NAV_LINKS, { href: "/admin", label: "Administrar" }]
+      : NAV_LINKS;
 
   useEffect(() => {
     void me().then(setProfile);
@@ -141,6 +153,7 @@ export default function NavbarClient() {
   }
 
   return (
+    <>
     <header
       className={`sticky top-0 z-50 transition-all duration-300 ${
         scrolled
@@ -160,7 +173,7 @@ export default function NavbarClient() {
 
         {/* Desktop Nav */}
         <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
-          {NAV_LINKS.map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -177,6 +190,11 @@ export default function NavbarClient() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          {profile?.role === "SUPER_ADMIN" && (
+            <div className="hidden md:block">
+              <ViewAsSelector viewAs={viewAs} onSelect={setViewAs} />
+            </div>
+          )}
           <CurrencySelector />
           <ThemeToggle />
 
@@ -214,7 +232,7 @@ export default function NavbarClient() {
       {mobileOpen && (
         <div className="animate-slide-up-sm border-t border-gray-100 bg-white px-4 pb-4 dark:border-white/6 dark:bg-brand-navy-800 md:hidden">
           <nav className="flex flex-col gap-1 pt-2">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -227,6 +245,11 @@ export default function NavbarClient() {
                 {link.label}
               </Link>
             ))}
+            {profile?.role === "SUPER_ADMIN" && (
+              <div className="mt-1 border-t border-gray-100 pt-2 dark:border-white/6">
+                <ViewAsSelector viewAs={viewAs} onSelect={setViewAs} compact />
+              </div>
+            )}
             {!profile && (
               <Link
                 href="/cuenta/entrar"
@@ -239,5 +262,7 @@ export default function NavbarClient() {
         </div>
       )}
     </header>
+    {viewAs && <ViewingAsBanner viewAs={viewAs} onExit={() => setViewAs(null)} />}
+    </>
   );
 }
