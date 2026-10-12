@@ -59,6 +59,12 @@ export default function SearchBar({
 
   const cityContainerRef = useRef<HTMLDivElement>(null);
   const guestsContainerRef = useRef<HTMLDivElement>(null);
+  const fromContainerRef = useRef<HTMLDivElement>(null);
+  const toContainerRef = useRef<HTMLDivElement>(null);
+
+  // Señales de apertura: clickear cualquier parte del campo abre su calendario.
+  const [fromSignal, setFromSignal] = useState(0);
+  const [toSignal, setToSignal] = useState(0);
 
   // Cargar destinos reales de la base de datos vía API cliente
   useEffect(() => {
@@ -266,7 +272,16 @@ export default function SearchBar({
         <div className={dividerCls} aria-hidden="true" />
 
         {/* ── 2. Llegada (DatePicker) ── */}
-        <div className={fieldContainerClass}>
+        <div
+          ref={fromContainerRef}
+          className={fieldContainerClass}
+          onClick={(e) => {
+            // El botón interno ya alterna por sí solo; acá solo ampliamos
+            // el hitbox al resto del contenedor.
+            if ((e.target as HTMLElement).closest("button")) return;
+            setFromSignal((n) => n + 1);
+          }}
+        >
           <span className={labelCls}>Llegada</span>
           <div className="flex items-center gap-2">
             <svg
@@ -286,6 +301,8 @@ export default function SearchBar({
                 setFrom(iso);
                 if (to && to <= iso) setTo("");
               }}
+              rangeTo={to || undefined}
+              openSignal={fromSignal}
               compact
               heroMode={heroMode}
             />
@@ -295,7 +312,14 @@ export default function SearchBar({
         <div className={dividerCls} aria-hidden="true" />
 
         {/* ── 3. Salida (DatePicker) ── */}
-        <div className={fieldContainerClass}>
+        <div
+          ref={toContainerRef}
+          className={fieldContainerClass}
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest("button")) return;
+            setToSignal((n) => n + 1);
+          }}
+        >
           <span className={labelCls}>Salida</span>
           <div className="flex items-center gap-2">
             <svg
@@ -313,6 +337,9 @@ export default function SearchBar({
               value={to}
               minDate={from || undefined}
               onChange={setTo}
+              rangeFrom={from || undefined}
+              rangeTo={to || undefined}
+              openSignal={toSignal}
               compact
               heroMode={heroMode}
             />

@@ -250,6 +250,17 @@
   .btn-press:active   { transform: none; }
 }
 
+/* ─── Contraste AA en modo claro ───────────────────────────── */
+/* El dorado #C9A84C como texto sobre blanco (~2.2:1) no llega a AA: en
+   modo claro se oscurece solo el color de texto (fondos, bordes e iconos
+   decorativos intactos). En oscuro se mantiene el dorado original. */
+html:not(.dark) .text-brand-gold {
+  color: #7a5f1c;
+}
+html:not(.dark) .text-brand-gold\/80 {
+  color: rgb(122 95 28 / 0.8);
+}
+
 /* ─── Calendar overrides ───────────────────────────────────── */
 .cal-available:not(.rdp-day_selected) {
   color: #059669;
@@ -259,6 +270,24 @@
   animation: day-in 150ms cubic-bezier(0.16,1,0.3,1) both;
 }
 .dark .cal-available:not(.rdp-day_selected) { color: #34d399; }
+
+/* Rango ya elegido (solo visual, DatePickerButton): el otro extremo se
+   marca como seleccionado y el medio se sombrea. */
+.cal-range-from:not(.rdp-day_selected) .rdp-day_button,
+button.cal-range-from:not(.rdp-day_selected) {
+  background-color: #C9A84C !important;
+  color: #0A1628 !important;
+  font-weight: 700 !important;
+}
+.cal-range-middle .rdp-day_button,
+button.cal-range-middle {
+  background-color: rgba(201,168,76,0.18) !important;
+  border-radius: 0 !important;
+}
+.dark .cal-range-middle .rdp-day_button,
+.dark button.cal-range-middle {
+  background-color: rgba(201,168,76,0.25) !important;
+}
 
 /* rdp overrides to match our theme */
 .rdp-button:hover:not(.rdp-day_selected) {

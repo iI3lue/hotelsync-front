@@ -58,7 +58,7 @@ export default function ThemeToggle() {
   }, []);
 
   const btnCls =
-    "flex h-9 w-9 items-center justify-center rounded-xl text-gray-500 transition-all duration-150 hover:bg-brand-navy/8 hover:text-brand-navy dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold";
+    "flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition-all duration-150 hover:bg-brand-navy/8 hover:text-brand-navy active:scale-95 dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold";
 
   if (!mounted) {
     return <span className={btnCls} aria-hidden="true"><span className="h-4 w-4" /></span>;

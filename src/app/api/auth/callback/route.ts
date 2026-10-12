@@ -120,7 +120,10 @@ export async function GET(request: NextRequest) {
     session.assignment.role !== "GUEST"
       ? "/admin"
       : returnTo;
-  const response = NextResponse.redirect(`${appBaseUrl()}${dest}`);
+  // Marcador para el toast "Sesión iniciada con Google" (lo consume
+  // LoginToast y lo limpia de la URL sin recargar).
+  const sep = dest.includes("?") ? "&" : "?";
+  const response = NextResponse.redirect(`${appBaseUrl()}${dest}${sep}login=google`);
   response.cookies.set("hs_oauth_state", "", { path: "/api/auth/callback", maxAge: 0 });
   response.cookies.set("hs_oauth_nonce", "", { path: "/api/auth/callback", maxAge: 0 });
   response.cookies.set("hs_oauth_verifier", "", { path: "/api/auth/callback", maxAge: 0 });

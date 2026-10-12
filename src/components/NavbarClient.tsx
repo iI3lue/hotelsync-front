@@ -10,7 +10,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 const NAV_LINKS = [
   { href: "/",             label: "Inicio" },
   { href: "/buscar",       label: "Buscar" },
-  { href: "/reservas/nueva", label: "Reservar" },
+  { href: "/mis-reservas", label: "Mis reservas" },
 ];
 
 function UserMenu({ profile, onLogout }: { profile: AuthProfile; onLogout: () => void }) {
@@ -24,9 +24,20 @@ function UserMenu({ profile, onLogout }: { profile: AuthProfile; onLogout: () =>
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="true"
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-gold text-xs font-bold text-brand-navy shadow-gold transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+        aria-label={`Menú de ${profile.name || profile.email}`}
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-brand-gold text-xs font-bold text-brand-navy shadow-gold transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
       >
-        {initials}
+        {profile.picture_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={profile.picture_url}
+            alt=""
+            referrerPolicy="no-referrer"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          initials
+        )}
       </button>
 
       {open && (
@@ -40,10 +51,23 @@ function UserMenu({ profile, onLogout }: { profile: AuthProfile; onLogout: () =>
             <div className="border-b border-gray-100 px-4 py-3 dark:border-white/6">
               <p className="text-xs text-gray-400">Conectado como</p>
               <p className="mt-0.5 truncate text-sm font-medium text-brand-navy dark:text-gray-100">
-                {profile.email}
+                {profile.name || profile.email}
               </p>
+              {profile.name && (
+                <p className="truncate text-xs text-gray-400">{profile.email}</p>
+              )}
             </div>
             <div className="py-1">
+              <Link
+                href="/cuenta/perfil"
+                onClick={() => setOpen(false)}
+                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                Mi perfil
+              </Link>
               <Link
                 href="/mis-reservas"
                 onClick={() => setOpen(false)}

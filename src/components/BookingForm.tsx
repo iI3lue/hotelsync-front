@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import type { Booking, BookingCreated, RoomType } from "@/lib/api";
-import { LONG_TIMEOUT_MS, postJson } from "@/lib/api-client";
+import { LONG_TIMEOUT_MS, fetchAvailabilityRange, postJson } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
+import { formatShort } from "@/lib/dates";
+import { firstNightWithoutStock, stayNights } from "@/lib/stay-range";
 import Money from "@/components/Money";
 import { useCurrency } from "@/components/CurrencyProvider";
-import AvailabilityCalendar from "@/components/AvailabilityCalendar";
+import RangeCalendar from "@/components/RangeCalendar";
 import Spinner from "@/components/Spinner";
 
 /* ─── Helpers ──────────────────────────────────────────────── */
@@ -285,6 +287,7 @@ export default function BookingForm({
   const [booking, setBooking] = useState<(BookingCreated & Partial<Booking>) | null>(null);
   const [error,   setError]   = useState<string | null>(null);
   const [saving,  setSaving]  = useState(false);
+  const [checking,setChecking]= useState(false);
   const [copied,  setCopied]  = useState<string | null>(null);
 
   const rate   = Number(roomType.base_rate);
@@ -292,11 +295,30 @@ export default function BookingForm({
   const total  = nights > 0 ? rate * nights : null;
 
   /* ── Navigation ── */
-  function goNext() {
+  async function goNext() {
     setError(null);
     if (step === 0) {
       if (!checkIn || !checkOut) { setError("Elegí ambas fechas para continuar."); return; }
       if (nights <= 0)           { setError("El check-out debe ser posterior al check-in."); return; }
+      // Valida cada noche de la estadía (el rango puede cruzar meses que el
+      // calendario aún no cargó). El backend confirma con 409 de todos modos.
+      setChecking(true);
+      try {
+        const lastNight = stayNights(checkIn, checkOut).at(-1) ?? checkIn;
+        const range = await fetchAvailabilityRange(roomType.room_type_id, checkIn, lastNight);
+        const stock: Record<string, number> = {};
+        for (const [iso, a] of Object.entries(range)) stock[iso] = Number(a.available ?? 0);
+        const missing = firstNightWithoutStock(stayNights(checkIn, checkOut), stock);
+        if (missing) {
+          setError(`Sin disponibilidad el ${formatShort(missing)}. Elegí otro rango.`);
+          return;
+        }
+      } catch {
+        // Sin stock verificable (red caída, servicio dormido): deja pasar y
+        // que el backend decida con su 409.
+      } finally {
+        setChecking(false);
+      }
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
@@ -433,32 +455,28 @@ export default function BookingForm({
           <div>
             <h2 className="mb-1 text-lg font-semibold text-brand-navy dark:text-white">Elegí tus fechas</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Los días en verde tienen habitaciones disponibles.
+              Tocá la llegada y después la salida. Los días en verde tienen habitaciones disponibles.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <fieldset className="min-w-0">
-              <legend className="input-label mb-2">Check-in</legend>
-              <AvailabilityCalendar
-                roomTypeId={roomType.room_type_id}
-                selected={checkIn || undefined}
-                onSelect={(iso) => {
-                  setCheckIn(iso);
-                  if (checkOut && checkOut <= iso) setCheckOut("");
-                }}
-              />
-            </fieldset>
-            <fieldset className="min-w-0">
-              <legend className="input-label mb-2">Check-out</legend>
-              <AvailabilityCalendar
-                roomTypeId={roomType.room_type_id}
-                selected={checkOut || undefined}
-                onSelect={setCheckOut}
-                minDate={checkIn || undefined}
-              />
-            </fieldset>
-          </div>
+          <fieldset className="min-w-0">
+            <legend className="input-label mb-2">Estadía</legend>
+            <RangeCalendar
+              roomTypeId={roomType.room_type_id}
+              from={checkIn || undefined}
+              to={checkOut || undefined}
+              onChange={(from, to) => {
+                setCheckIn(from);
+                setCheckOut(to);
+              }}
+            />
+          </fieldset>
+
+          {checking && (
+            <p aria-live="polite" className="text-sm text-gray-500 dark:text-gray-400">
+              Verificando disponibilidad de cada noche…
+            </p>
+          )}
 
           {/* Live price preview */}
           {checkIn && checkOut && total !== null && (
@@ -609,8 +627,13 @@ export default function BookingForm({
         ) : <div />}
 
         {step < STEPS.length - 1 ? (
-          <button type="button" onClick={goNext} className="btn-primary">
-            Siguiente →
+          <button
+            type="button"
+            onClick={() => void goNext()}
+            disabled={checking}
+            className="btn-primary"
+          >
+            {checking ? "Verificando…" : "Siguiente →"}
           </button>
         ) : (
           <button

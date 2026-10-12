@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
 import WarmUp from "@/components/WarmUp";
 import NavbarClient from "@/components/NavbarClient";
+import LoginToast from "@/components/LoginToast";
 import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
@@ -52,6 +54,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
 
+          <Suspense fallback={null}>
+            <LoginToast />
+          </Suspense>
+
           <footer className="mt-20 border-t border-brand-navy/8 bg-white dark:border-white/6 dark:bg-brand-navy-800">
             <div className="mx-auto max-w-7xl px-4 py-12">
               <div className="grid grid-cols-1 gap-10 md:grid-cols-4">
@@ -74,7 +80,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     {[
                       { href: "/", label: "Hoteles" },
                       { href: "/buscar", label: "Buscar" },
-                      { href: "/reservas/nueva", label: "Reservar" },
+                      { href: "/mis-reservas", label: "Mis reservas" },
                     ].map((l) => (
                       <li key={l.href}>
                         <a

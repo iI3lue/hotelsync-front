@@ -26,6 +26,14 @@ interface DatePickerButtonProps {
   compact?: boolean;
   /** Hero mode: white text on dark background trigger. */
   heroMode?: boolean;
+  /** Pinta un rango ya elegido sin cambiar la selección (solo visual). */
+  rangeFrom?: string;
+  rangeTo?: string;
+  /**
+   * Contador externo: cuando cambia, abre el calendario. Permite que todo
+   * el contenedor padre abra el picker (hitbox amplia) sin anidar botones.
+   */
+  openSignal?: number;
 }
 
 /**
@@ -43,6 +51,9 @@ export default function DatePickerButton({
   name,
   compact = false,
   heroMode = false,
+  rangeFrom,
+  rangeTo,
+  openSignal = 0,
 }: DatePickerButtonProps) {
   const [inner, setInner] = useState(value ?? defaultValue);
   const [open, setOpen] = useState(false);
@@ -56,6 +67,16 @@ export default function DatePickerButton({
   useEffect(() => {
     if (value !== undefined) setInner(value);
   }, [value]);
+
+  // Apertura desde el contenedor padre (hitbox amplia): el padre incrementa
+  // openSignal al clickearse; se ignora el valor inicial.
+  const signalRef = useRef(openSignal);
+  useEffect(() => {
+    if (signalRef.current !== openSignal) {
+      signalRef.current = openSignal;
+      setOpen(true);
+    }
+  }, [openSignal]);
 
   // El cierre por clic afuera/Escape lo maneja el Popover portal.
   // (Un listener propio cerraría en `pointerdown`, antes de que el clic
@@ -72,6 +93,19 @@ export default function DatePickerButton({
       ? "bg-transparent text-sm font-medium text-white placeholder-blue-100/40 outline-none cursor-pointer w-full text-left"
       : "bg-transparent text-sm font-medium text-brand-navy outline-none cursor-pointer w-full text-left dark:text-white"
     : buttonClass;
+
+  // Rango ya elegido, solo visual: marca el otro extremo y sombrea el medio.
+  const rangeFromDate = rangeFrom ? fromIsoDate(rangeFrom) : undefined;
+  const rangeToDate = rangeTo ? fromIsoDate(rangeTo) : undefined;
+  const rangeModifiers =
+    rangeFromDate || rangeToDate
+      ? {
+          ...(rangeFromDate ? { range_from: rangeFromDate } : {}),
+          ...(rangeFromDate && rangeToDate && rangeFromDate < rangeToDate
+            ? { range_middle: { after: rangeFromDate, before: rangeToDate } }
+            : {}),
+        }
+      : undefined;
 
   return (
     <div ref={boxRef} className="relative min-w-0 w-full">
@@ -111,6 +145,12 @@ export default function DatePickerButton({
               if (d) pick(toIsoDate(d));
             }}
             disabled={{ before: min }}
+            modifiers={rangeModifiers}
+            modifiersClassNames={
+              rangeModifiers
+                ? { range_from: "cal-range-from", range_middle: "cal-range-middle" }
+                : undefined
+            }
             captionLayout="dropdown"
             startMonth={
               minDate

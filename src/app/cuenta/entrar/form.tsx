@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import GoogleButton from "@/components/GoogleButton";
+import { useToast } from "@/components/Toast";
 import { login, me } from "@/lib/auth-client";
 
 function safeReturnTo(value: string | undefined): string {
@@ -86,6 +87,7 @@ export default function EnterForm({
   params: Promise<{ returnTo?: string; error?: string }>;
 }) {
   const router = useRouter();
+  const { success } = useToast();
   const [returnTo, setReturnTo] = useState("/mis-reservas");
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -114,6 +116,7 @@ export default function EnterForm({
     setError(null);
     try {
       const profile = await login(email.trim(), password);
+      success("Inicio de sesión exitoso", profile.email);
       router.push(postLoginDest(profile, returnTo));
       router.refresh();
     } catch (err) {

@@ -4,12 +4,20 @@ export interface AuthProfile {
   user_id: string;
   email: string;
   name: string;
+  phone: string | null;
+  picture_url: string | null;
   role: string;
   hotel_id: string | null;
 }
 
 interface SessionPayload {
-  user: { user_id: string; email: string; name: string };
+  user: {
+    user_id: string;
+    email: string;
+    name: string;
+    phone?: string | null;
+    picture_url?: string | null;
+  };
   assignment: { role: string; hotel_id: string | null } | null;
 }
 
@@ -18,6 +26,8 @@ function toProfile(data: SessionPayload): AuthProfile {
     user_id: data.user.user_id,
     email: data.user.email,
     name: data.user.name,
+    phone: data.user.phone ?? null,
+    picture_url: data.user.picture_url ?? null,
     role: data.assignment?.role ?? "GUEST",
     hotel_id: data.assignment?.hotel_id ?? null,
   };
@@ -70,6 +80,25 @@ export async function me(): Promise<AuthProfile | null> {
   } catch {
     return null;
   }
+}
+
+/** Actualiza nombre/teléfono del perfil propio. */
+export async function updateMe(input: {
+  name?: string;
+  phone?: string;
+}): Promise<AuthProfile> {
+  const res = await fetch("/api/auth/me", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { message?: string }).message || `Error ${res.status}`
+    );
+  }
+  return toProfile((await res.json()) as SessionPayload);
 }
 
 /**
