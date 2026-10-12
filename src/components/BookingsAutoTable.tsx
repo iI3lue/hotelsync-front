@@ -45,6 +45,7 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
   const [status, setStatus] = useState<StatusFilter>("all");
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [showHidden, setShowHidden] = useState(false);
@@ -102,6 +103,7 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
   const handleTransition = async (bookingId: string, action: "confirm" | "cancel") => {
     setBusy(bookingId);
     setNotice(null);
+    setActionError(null);
     const previous = bookings;
     const nextStatus = action === "confirm" ? "confirmed" : "cancelled";
     // Optimista: la fila cambia al instante; rollback si falla.
@@ -121,7 +123,19 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
       );
     } catch (err) {
       await mutate(previous, false);
-      setNotice(null);
+      const msg = err instanceof Error ? err.message : "La operación falló";
+      const conflict =
+        msg.includes("409") || msg.toLowerCase().includes("conflict");
+      const unavailable =
+        msg.toLowerCase().includes("disponib") ||
+        msg.toLowerCase().includes("availab");
+      // Nunca fallar en silencio: la fila vuelve a su estado pero el motivo
+      // queda visible (antes se "reiniciaba" sin explicar nada).
+      setActionError(
+        action === "confirm" && (conflict || unavailable)
+          ? `No se pudo confirmar la reserva ${bookingId.slice(0, 8)}…: sin disponibilidad para esas fechas.`
+          : `No se pudo ${action === "confirm" ? "confirmar" : "cancelar"} la reserva ${bookingId.slice(0, 8)}…: ${msg}`
+      );
       void mutate();
       return;
     } finally {
@@ -147,6 +161,11 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
             <button type="button" onClick={() => void mutate()} className="underline underline-offset-2">
               Reintentar
             </button>
+          </p>
+        ) : null}
+        {actionError ? (
+          <p role="alert" className="mb-4 rounded bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
+            {actionError}
           </p>
         ) : null}
         {notice ? (
