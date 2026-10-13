@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Hotel, RoomType } from "@/lib/api";
 import { fetchHotels, fetchRoomTypes } from "@/lib/api-client";
 
@@ -39,12 +39,19 @@ export default function SimulatorPage() {
   const [total, setTotal] = useState("17000");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SimResult | null>(null);
 
   useEffect(() => {
-    void fetchHotels()
-      .then((data) => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    void fetchHotels()      .then((data) => {
         setHotels(data);
         if (data.length > 0) setHotelId(data[0].hotel_id);
       })
@@ -72,7 +79,13 @@ export default function SimulatorPage() {
   const submit = useCallback(
     async (externalId?: string) => {
       setBusy(true);
+      setElapsed(0);
       setError(null);
+      const startedAt = Date.now();
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setElapsed(Math.round((Date.now() - startedAt) / 1000));
+      }, 500);
       try {
         const res = await fetch("/api/simulator/reservations", {
           method: "POST",
@@ -104,6 +117,10 @@ export default function SimulatorPage() {
           err instanceof Error ? err.message : "No se pudo simular la reserva"
         );
       } finally {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
         setBusy(false);
       }
     },
@@ -268,10 +285,25 @@ export default function SimulatorPage() {
           <button
             type="submit"
             disabled={busy || !ready}
-            className="mt-4 rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 touch-manipulation"
+            className="mt-4 inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 touch-manipulation"
           >
-            {busy ? "Simulando…" : "Simular reserva OTA"}
+            {busy ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Simulando… {elapsed}s
+              </>
+            ) : (
+              "Simular reserva OTA"
+            )}
           </button>
+          {busy && elapsed >= 10 ? (
+            <p role="status" className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              Los servicios en plan free despiertan lento; puede tardar hasta ~1 min. No cierres la página.
+            </p>
+          ) : null}
         </form>
       )}
     </div>
