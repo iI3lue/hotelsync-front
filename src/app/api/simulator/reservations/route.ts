@@ -74,6 +74,9 @@ export async function POST(request: NextRequest) {
           "Content-Type": "application/json",
           "x-provider-key": providerKey,
         },
+        // Los backends en plan free despiertan lento: se corta a los 45s
+        // para devolver 503 en vez de colgar el navegador (timeout Vercel).
+        signal: AbortSignal.timeout(45_000),
         body: JSON.stringify({
           external_id,
           hotel_id,
@@ -90,7 +93,7 @@ export async function POST(request: NextRequest) {
       }
     );
   } catch {
-    return errorJson("Channel manager unavailable", 503);
+    return errorJson("Channel manager unavailable (timeout)", 503);
   }
 
   const data = await upstream.json().catch(() => ({}));
