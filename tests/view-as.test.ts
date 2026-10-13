@@ -47,10 +47,11 @@ describe("adminSectionsFor", () => {
     expect(adminSectionsFor("GUEST")).toEqual([]);
   });
 
-  it("super admin ve Hoteles y Personal", () => {
+  it("super admin ve Hoteles, Personal y Simulador", () => {
     expect(adminSectionsFor("SUPER_ADMIN").map((s) => s.href)).toEqual([
       "/admin/hotels",
       "/admin/staff",
+      "/admin/simulador",
     ]);
   });
 });

@@ -76,6 +76,7 @@ export function adminSectionsFor(
     { href: "/admin/staff", label: "Personal" },
     { href: "/admin/recepcion", label: "Recepción" },
     { href: "/admin/housekeeping", label: "Limpieza" },
+    { href: "/admin/simulador", label: "Simulador OTA" },
   ];
   switch (viewedRole) {
     case "RECEPTIONIST":
@@ -91,7 +92,10 @@ export function adminSectionsFor(
       );
     case "SUPER_ADMIN":
       return all.filter(
-        (s) => s.href === "/admin/hotels" || s.href === "/admin/staff"
+        (s) =>
+          s.href === "/admin/hotels" ||
+          s.href === "/admin/staff" ||
+          s.href === "/admin/simulador"
       );
     case "GUEST":
       return [];
