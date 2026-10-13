@@ -5,13 +5,24 @@ import { useEffect, useState } from "react";
 import GoogleButton from "@/components/GoogleButton";
 import { login, me } from "@/lib/auth-client";
 
+import { defaultRouteForRole, isAllowedPathForRole } from "@/lib/routes";
+
 function safeReturnTo(value: string | undefined): string {
   if (value && value.startsWith("/") && !value.startsWith("//")) return value;
   return "/mis-reservas";
 }
 
 function postLoginDest(profile: { role: string }, returnTo: string): string {
-  if (profile.role !== "GUEST" && returnTo === "/mis-reservas") return "/admin";
+  const roleDefault = defaultRouteForRole(profile.role);
+  if (profile.role === "RECEPTIONIST" || profile.role === "HOUSEKEEPER") {
+    return roleDefault;
+  }
+  if (!isAllowedPathForRole(profile.role, returnTo)) {
+    return roleDefault;
+  }
+  if (profile.role !== "GUEST" && returnTo === "/mis-reservas") {
+    return roleDefault;
+  }
   return returnTo;
 }
 

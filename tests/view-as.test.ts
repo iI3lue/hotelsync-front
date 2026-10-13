@@ -30,15 +30,16 @@ describe("adminSectionsFor", () => {
   });
 
   it("limpieza solo ve Limpieza", () => {
-    expect(adminSectionsFor("HOUSEKEEPING").map((s) => s.href)).toEqual([
+    expect(adminSectionsFor("HOUSEKEEPER").map((s) => s.href)).toEqual([
       "/admin/housekeeping",
     ]);
   });
 
-  it("manager ve Panel y Hoteles", () => {
+  it("manager ve Panel, Hoteles y Personal", () => {
     expect(adminSectionsFor("MANAGER").map((s) => s.href)).toEqual([
       "/admin",
       "/admin/hotels",
+      "/admin/staff",
     ]);
   });
 
@@ -46,7 +47,10 @@ describe("adminSectionsFor", () => {
     expect(adminSectionsFor("GUEST")).toEqual([]);
   });
 
-  it("super admin ve todo", () => {
-    expect(adminSectionsFor("SUPER_ADMIN")).toHaveLength(4);
+  it("super admin ve Hoteles y Personal", () => {
+    expect(adminSectionsFor("SUPER_ADMIN").map((s) => s.href)).toEqual([
+      "/admin/hotels",
+      "/admin/staff",
+    ]);
   });
 });

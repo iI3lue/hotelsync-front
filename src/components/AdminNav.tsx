@@ -11,9 +11,8 @@ const linkClass =
   "rounded px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-200 dark:hover:text-blue-400";
 
 /**
- * Navegación del admin filtrada por la vista simulada ("Ver como…").
- * Solo renderizado: si el rol real no es SUPER_ADMIN se muestra todo
- * como antes (zona académica sin gating real).
+ * Navegación del admin filtrada por rol. Solo renderizado: el middleware
+ * y el backend revalidan el acceso real en servidor.
  */
 export default function AdminNav() {
   const pathname = usePathname();
@@ -24,10 +23,11 @@ export default function AdminNav() {
     void me().then((p) => setRealRole(p?.role ?? null));
   }, []);
 
+  // SUPER_ADMIN puede simular vistas; el resto ve solo sus secciones reales.
   const sections =
     realRole === "SUPER_ADMIN"
       ? adminSectionsFor(viewedRole)
-      : adminSectionsFor("SUPER_ADMIN");
+      : adminSectionsFor(realRole ?? "GUEST");
 
   return (
     <nav

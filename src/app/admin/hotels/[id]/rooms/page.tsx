@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { fetchPhysicalRooms, fetchRoomTypes } from "@/lib/api";
+import { getSessionScope } from "@/lib/server-session";
 import PhysicalRoomForm from "@/components/PhysicalRoomForm";
 import RoomTypeForm from "@/components/RoomTypeForm";
 
@@ -8,6 +10,13 @@ export default async function RoomTypesPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  // El manager solo opera su hotel: un id ajeno redirige al propio.
+  const session = await getSessionScope();
+  if (session.role === "MANAGER" && session.hotel_id !== id) {
+    redirect(session.hotel_id ? `/admin/hotels/${session.hotel_id}/rooms` : "/admin");
+  }
+
   const [roomTypes, physicalRooms] = await Promise.all([
     fetchRoomTypes(id),
     fetchPhysicalRooms(id),

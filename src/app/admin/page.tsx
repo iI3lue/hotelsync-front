@@ -1,18 +1,36 @@
-import { fetchArrivals, fetchBookings, fetchHotels } from "@/lib/api";
+import { fetchArrivals, fetchBookings, fetchHotelById, fetchHotels } from "@/lib/api";
+import { getSessionScope } from "@/lib/server-session";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
 export default async function DashboardPage() {
+  const session = await getSessionScope();
+  // El manager solo opera su hotel asignado.
+  const isManager = session.role === "MANAGER";
+  const assignedHotelId = session.hotel_id;
+
   let hotelsCount = 0;
   let firstHotelId = "";
-  try {
-    const hotels = await fetchHotels();
-    hotelsCount = hotels.length;
-    firstHotelId = hotels[0]?.hotel_id || "";
-  } catch {
-    hotelsCount = 0;
+  if (isManager) {
+    if (assignedHotelId) {
+      try {
+        const assigned = await fetchHotelById(assignedHotelId);
+        hotelsCount = 1;
+        firstHotelId = assigned.hotel_id;
+      } catch {
+        hotelsCount = 0;
+      }
+    }
+  } else {
+    try {
+      const hotels = await fetchHotels();
+      hotelsCount = hotels.length;
+      firstHotelId = hotels[0]?.hotel_id || "";
+    } catch {
+      hotelsCount = 0;
+    }
   }
 
   let arrivalsToday = 0;
@@ -72,6 +90,26 @@ export default async function DashboardPage() {
             </a>
           </p>
         </div>
+        {(isManager || session.role === "SUPER_ADMIN") ? (
+          <div className="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
+            <h2 className="text-lg font-semibold text-gray-600 dark:text-gray-300">
+              Personal
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              {isManager
+                ? "Cuentas de recepción y limpieza de tu hotel."
+                : "Cuentas de personal y roles por hotel."}
+            </p>
+            <p className="mt-2">
+              <a
+                href="/admin/staff"
+                className="text-blue-600 hover:underline dark:text-blue-400"
+              >
+                Gestionar
+              </a>
+            </p>
+          </div>
+        ) : null}
         <div className="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
           <h2 className="text-lg font-semibold text-gray-600 dark:text-gray-300">
             Tipos de habitación

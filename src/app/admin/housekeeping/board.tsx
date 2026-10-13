@@ -101,14 +101,25 @@ export default function HousekeepingBoard({
   const [hotel, setHotel] = useState<CleaningTask[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [noAssignment, setNoAssignment] = useState(false);
 
   useEffect(() => {
     void params.then((p) => {
-      if (p.hotel_id) {
-        setHotelId(p.hotel_id);
-        return;
-      }
-      void me().then((profile) => setHotelId(profile?.hotel_id ?? ""));
+      void me().then((profile) => {
+        // El personal de limpieza solo opera su hotel asignado: se ignora
+        // un ?hotel_id= manipulado. El backend (requireHotelRole) lo
+        // revalida con 403 ante cualquier intento sobre otro hotel.
+        if (profile?.role === "HOUSEKEEPER") {
+          setNoAssignment(!profile.hotel_id);
+          setHotelId(profile.hotel_id ?? "");
+          return;
+        }
+        if (p.hotel_id) {
+          setHotelId(p.hotel_id);
+          return;
+        }
+        setHotelId(profile?.hotel_id ?? "");
+      });
     });
   }, [params]);
 
@@ -167,6 +178,12 @@ export default function HousekeepingBoard({
       {error ? (
         <p role="alert" className="mb-4 rounded bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
           {error}
+        </p>
+      ) : null}
+
+      {noAssignment ? (
+        <p role="alert" className="mb-4 rounded bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+          Tu usuario no tiene hotel asignado. Pedile a tu manager que te asigne uno.
         </p>
       ) : null}
 

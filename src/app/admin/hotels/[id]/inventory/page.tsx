@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { fetchHotelById, fetchRoomTypes } from "@/lib/api";
+import { getSessionScope } from "@/lib/server-session";
 import InventoryTable from "@/components/InventoryTable";
 
 export default async function InventoryPage({
@@ -7,6 +9,12 @@ export default async function InventoryPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  // El manager solo opera su hotel: un id ajeno redirige al propio.
+  const session = await getSessionScope();
+  if (session.role === "MANAGER" && session.hotel_id !== id) {
+    redirect(session.hotel_id ? `/admin/hotels/${session.hotel_id}/inventory` : "/admin");
+  }
 
   let hotelName = "este hotel";
   try {

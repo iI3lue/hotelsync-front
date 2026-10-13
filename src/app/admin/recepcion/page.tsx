@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import ReceptionBoard from "@/components/ReceptionBoard";
 import BookingsAutoTable from "@/components/BookingsAutoTable";
 import DatePickerButton from "@/components/DatePickerButton";
-import { fetchHotels } from "@/lib/api";
+import { fetchHotelById, fetchHotels } from "@/lib/api";
+import { getSessionScope } from "@/lib/server-session";
 
 export const metadata: Metadata = {
   title: "Recepción en HotelSync",
@@ -24,15 +25,40 @@ export default async function RecepcionPage({
   searchParams: Promise<{ hotel_id?: string; date?: string; tab?: string }>;
 }) {
   const { hotel_id, date, tab } = await searchParams;
+  const session = await getSessionScope();
+  const isReceptionist = session.role === "RECEPTIONIST";
+  const assignedHotelId = session.hotel_id;
 
   let hotels: { hotel_id: string; name: string }[] = [];
-  try {
-    hotels = await fetchHotels();
-  } catch {
-    hotels = [];
+  let assignedHotelName = "";
+  if (isReceptionist) {
+    // El recepcionista solo opera su hotel asignado: no se lista el
+    // catálogo completo ni se acepta ?hotel_id= de otro hotel.
+    if (assignedHotelId) {
+      try {
+        const assigned = await fetchHotelById(assignedHotelId);
+        assignedHotelName = assigned.name;
+      } catch {
+        assignedHotelName = "Mi hotel asignado";
+      }
+      hotels = [{ hotel_id: assignedHotelId, name: assignedHotelName }];
+    } else {
+      hotels = [];
+    }
+  } else {
+    try {
+      hotels = await fetchHotels();
+    } catch {
+      hotels = [];
+    }
   }
 
-  const effectiveHotel = hotel_id || hotels[0]?.hotel_id || "";
+  // Para RECEPTIONIST se ignora el ?hotel_id= manipulado: siempre el
+  // hotel de su asignación. El backend (requireDeskScope) lo revalida
+  // con 403 ante cualquier intento de operar otro hotel.
+  const effectiveHotel = isReceptionist
+    ? (assignedHotelId ?? "")
+    : hotel_id || hotels[0]?.hotel_id || "";
   // Fecha vacía = "todas las fechas" (solo aplica al tab Reservas;
   // Llegadas es vista-día y usa hoy como fallback).
   const effectiveDate = date || "";
@@ -76,7 +102,23 @@ export default async function RecepcionPage({
             <label htmlFor="hotel-id" className={labelClass}>
               Hotel
             </label>
-            {hotels.length > 0 ? (
+            {isReceptionist ? (
+              effectiveHotel ? (
+                <>
+                  <input type="hidden" name="hotel_id" value={effectiveHotel} />
+                  <p
+                    id="hotel-id"
+                    className={`${inputClass} w-full bg-gray-50 dark:bg-gray-700/50`}
+                  >
+                    {assignedHotelName || "Mi hotel asignado"}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  Tu usuario no tiene hotel asignado. Pedile a tu manager que te asigne uno.
+                </p>
+              )
+            ) : hotels.length > 0 ? (
               <select
                 id="hotel-id"
                 name="hotel_id"

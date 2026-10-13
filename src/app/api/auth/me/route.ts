@@ -21,9 +21,16 @@ export async function GET(request: NextRequest) {
   const refresh = request.cookies.get("hs_refresh")?.value;
   if (!access && !refresh) return errorJson("Missing session", 401);
 
-  let upstream = access
-    ? await fetchMe(access)
-    : new Response(null, { status: 401 });
+  // Si user-service no responde (despertando/caído), 503 para que el
+  // cliente lo distinga de "sin sesión" (401) y pueda reintentar.
+  let upstream: Response;
+  try {
+    upstream = access
+      ? await fetchMe(access)
+      : new Response(null, { status: 401 });
+  } catch {
+    return errorJson("User service unavailable", 503);
+  }
   let data = await upstream.json().catch(() => ({}));
 
   if (upstream.status === 401 && refresh) {
@@ -41,7 +48,11 @@ export async function GET(request: NextRequest) {
       clearSessionCookies(response);
       return response;
     }
-    upstream = await fetchMe(rotatedData.access_token);
+    try {
+      upstream = await fetchMe(rotatedData.access_token);
+    } catch {
+      return errorJson("User service unavailable", 503);
+    }
     data = await upstream.json().catch(() => ({}));
     if (!upstream.ok) {
       return errorJson(

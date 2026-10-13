@@ -71,14 +71,32 @@ export async function logout(): Promise<void> {
   await fetch("/api/auth/logout", { method: "POST" }).catch(() => undefined);
 }
 
-/** Perfil de la sesión actual (null si no hay sesión). */
-export async function me(): Promise<AuthProfile | null> {
-  try {
-    const res = await fetch("/api/auth/me");
-    if (!res.ok) return null;
-    return toProfile((await res.json()) as SessionPayload);
-  } catch {
-    return null;
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Perfil de la sesión actual (null si no hay sesión).
+ *
+ * Solo el 401 significa "sin sesión" y corta de inmediato. Los fallos de
+ * red o 5xx/503 (backend despertando o caído) se reintentan con backoff:
+ * las cookies pueden ser válidas aunque el primer intento falle.
+ */
+export async function me(retries = 2): Promise<AuthProfile | null> {
+  let attempt = 0;
+  for (;;) {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) return toProfile((await res.json()) as SessionPayload);
+      // 401 = sin sesión, 4xx = error del cliente: no se recuperan solos.
+      if (res.status === 401 || res.status < 500) return null;
+      // 5xx/503: transitorio, se reintenta abajo.
+    } catch {
+      // Caída de red: se reintenta abajo.
+    }
+    if (attempt >= retries) return null;
+    attempt += 1;
+    await sleep(1000 * attempt);
   }
 }
 

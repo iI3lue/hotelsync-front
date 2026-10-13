@@ -1,10 +1,21 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { fetchHotels, filterHotels } from "@/lib/api";
+import { getSessionScope } from "@/lib/server-session";
 import AdminFilters from "@/components/AdminFilters";
 import ConfirmAction from "@/components/ConfirmAction";
 
-async function HotelsTable({ query }: { query?: string }) {
+async function HotelsTable({
+  query,
+  scopeHotelId,
+  canManageChain,
+}: {
+  query?: string;
+  /** Si se indica (manager), solo se muestra ese hotel. */
+  scopeHotelId?: string | null;
+  /** Crear/eliminar hoteles es solo SUPER_ADMIN. */
+  canManageChain: boolean;
+}) {
   let hotels = [];
   try {
     hotels = await fetchHotels();
@@ -16,7 +27,10 @@ async function HotelsTable({ query }: { query?: string }) {
     );
   }
 
-  const visible = filterHotels(hotels, query);
+  const scoped = scopeHotelId
+    ? hotels.filter((h) => h.hotel_id === scopeHotelId)
+    : hotels;
+  const visible = filterHotels(scoped, query);
   if (visible.length === 0) {
     return (
       <div className="mx-auto w-full max-w-7xl px-4 py-8">
@@ -36,14 +50,14 @@ async function HotelsTable({ query }: { query?: string }) {
           >
             Limpiar búsqueda
           </Link>
-        ) : (
+        ) : canManageChain ? (
           <Link
             href="/admin/hotels/new"
             className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 touch-manipulation"
           >
             Crear el primer hotel
           </Link>
-        )}
+        ) : null}
       </div>
       </div>
     );
@@ -118,13 +132,15 @@ async function HotelsTable({ query }: { query?: string }) {
                   >
                     Recepción
                   </Link>
-                  <ConfirmAction
-                    triggerLabel="Eliminar"
-                    title={`Eliminar “${hotel.name}”`}
-                    description="Esta acción es destructiva y no se puede deshacer. El endpoint de borrado aún no existe: cuando se implemente, esta confirmación lo protegerá."
-                    confirmLabel="Entendido"
-                    cancelLabel="Cerrar"
-                  />
+                  {canManageChain ? (
+                    <ConfirmAction
+                      triggerLabel="Eliminar"
+                      title={`Eliminar “${hotel.name}”`}
+                      description="Esta acción es destructiva y no se puede deshacer. El endpoint de borrado aún no existe: cuando se implemente, esta confirmación lo protegerá."
+                      confirmLabel="Entendido"
+                      cancelLabel="Cerrar"
+                    />
+                  ) : null}
                 </span>
               </td>
             </tr>
@@ -141,16 +157,22 @@ export default async function HotelsPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
+  const session = await getSessionScope();
+  // El manager solo opera su hotel asignado (crear hoteles es SUPER_ADMIN).
+  const isManager = session.role === "MANAGER";
+  const scopeHotelId = isManager ? session.hotel_id : null;
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-balance text-3xl font-bold">Hoteles</h1>
-        <a
-          href="/admin/hotels/new"
-          className="rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
-        >
-          Agregar hotel
-        </a>
+        {isManager ? null : (
+          <a
+            href="/admin/hotels/new"
+            className="rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
+          >
+            Agregar hotel
+          </a>
+        )}
       </div>
       <div className="mb-6">
         <AdminFilters initialQuery={q ?? ""} />
@@ -163,7 +185,7 @@ export default async function HotelsPage({
           </div>
         }
       >
-        <HotelsTable query={q} />
+        <HotelsTable query={q} scopeHotelId={scopeHotelId} canManageChain={!isManager} />
       </Suspense>
     </div>
   );
