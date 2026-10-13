@@ -156,8 +156,16 @@ export async function createHotel(data: {
   city: string;
   country: string;
   timezone: string;
+  image_url?: string;
 }): Promise<Hotel> {
   return clientPost<Hotel>("/api/property/hotels", data);
+}
+
+export async function updateHotel(
+  id: string,
+  data: Partial<Pick<Hotel, "name" | "address" | "city" | "country" | "timezone" | "image_url">>
+): Promise<Hotel> {
+  return putJson<Hotel>(`/api/property/hotels/${encodeURIComponent(id)}`, data);
 }
 
 export async function createRoomType(data: {

@@ -14,6 +14,7 @@ export default function HotelForm() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [timezone, setTimezone] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -35,6 +36,7 @@ export default function HotelForm() {
         city,
         country,
         timezone,
+        image_url: imageUrl.trim() || undefined,
       });
       setSuccess(true);
       setName("");
@@ -42,6 +44,7 @@ export default function HotelForm() {
       setCity("");
       setCountry("");
       setTimezone("");
+      setImageUrl("");
     } catch (err) {
       console.error(err);
       setError("No se pudo crear el hotel. Verificá los datos e intentá de nuevo.");
@@ -150,6 +153,22 @@ export default function HotelForm() {
             placeholder="America/Bogota…"
             className={inputClass}
             required
+          />
+        </div>
+        <div>
+          <label htmlFor="hotel-image" className={labelClass}>
+            Foto (URL)
+          </label>
+          <input
+            id="hotel-image"
+            name="hotel-image"
+            type="url"
+            autoComplete="off"
+            spellCheck={false}
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://images.unsplash.com/…"
+            className={inputClass}
           />
         </div>
       </div>

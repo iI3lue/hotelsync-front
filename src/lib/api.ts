@@ -42,6 +42,7 @@ export interface Hotel {
   city: string;
   country: string;
   timezone: string;
+  image_url?: string | null;
   roomTypes: RoomType[];
   cancellationPolicies: CancellationPolicy[];
 }

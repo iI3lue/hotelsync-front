@@ -135,13 +135,23 @@ function HotelCard({ hotel, search, availability }: HotelCardProps) {
     >
       {/* ── Image / placeholder ── */}
       <div className={`relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br ${gradient}`}>
-        {/* Initials watermark */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 flex items-center justify-center font-display text-6xl font-bold text-white/10 select-none"
-        >
-          {initials(hotel.name)}
-        </div>
+        {hotel.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={hotel.image_url}
+            alt={hotel.name}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          /* Initials watermark */
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 flex items-center justify-center font-display text-6xl font-bold text-white/10 select-none"
+          >
+            {initials(hotel.name)}
+          </div>
+        )}
 
         {/* Gold shimmer line at top */}
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-brand-gold to-transparent opacity-60" />

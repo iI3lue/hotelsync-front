@@ -73,6 +73,17 @@ export default async function HotelDetailPage({
 
       {/* Hero Hotel Banner */}
       <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-8 text-white shadow-xl md:p-12`}>
+        {hotel.image_url ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={hotel.image_url}
+              alt={hotel.name}
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          </>
+        ) : null}
         {/* Subtle decorative glow circles */}
         <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand-gold/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
