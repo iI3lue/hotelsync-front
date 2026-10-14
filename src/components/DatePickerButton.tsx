@@ -22,6 +22,10 @@ interface DatePickerButtonProps {
   id?: string;
   /** Si se pasa, renderiza un hidden input para formularios GET clásicos. */
   name?: string;
+  /** Override visual del trigger (solo modo normal): permite alinear con inputs h-10 del admin. */
+  triggerClassName?: string;
+  /** Override visual del label (solo modo normal). */
+  labelClassName?: string;
   /** Compact mode: hide label, use inline text trigger (for SearchBar). */
   compact?: boolean;
   /** Hero mode: white text on dark background trigger. */
@@ -49,6 +53,8 @@ export default function DatePickerButton({
   minDate,
   id,
   name,
+  triggerClassName,
+  labelClassName,
   compact = false,
   heroMode = false,
   rangeFrom,
@@ -90,9 +96,9 @@ export default function DatePickerButton({
 
   const triggerClass = compact
     ? heroMode
-      ? "bg-transparent text-sm font-medium text-white placeholder-blue-100/40 outline-none cursor-pointer w-full text-left"
-      : "bg-transparent text-sm font-medium text-brand-navy outline-none cursor-pointer w-full text-left dark:text-white"
-    : buttonClass;
+      ? "bg-transparent text-[0.95rem] text-white outline-none cursor-pointer w-full text-left"
+      : "bg-transparent text-[0.95rem] text-brand-navy outline-none cursor-pointer w-full text-left dark:text-white"
+    : (triggerClassName ?? buttonClass);
 
   // Rango ya elegido, solo visual: marca el otro extremo y sombrea el medio.
   const rangeFromDate = rangeFrom ? fromIsoDate(rangeFrom) : undefined;
@@ -110,7 +116,7 @@ export default function DatePickerButton({
   return (
     <div ref={boxRef} className="relative min-w-0 w-full">
       {!compact && (
-        <span id={id ? `${id}-label` : undefined} className={labelClass}>
+        <span id={id ? `${id}-label` : undefined} className={labelClassName ?? labelClass}>
           {label}
         </span>
       )}
@@ -127,14 +133,14 @@ export default function DatePickerButton({
       >
         {current
           ? <span className={heroMode ? "text-white" : "text-brand-navy dark:text-white"}>{formatShort(current)}</span>
-          : <span className={heroMode ? "text-blue-200/50" : "text-gray-400"}>Elegir fecha…</span>
+          : <span className={heroMode ? "text-white/50" : "text-brand-navy/40 dark:text-white/40"}>Agregar fecha</span>
         }
       </button>
       <Popover anchorRef={boxRef} open={open} onClose={() => setOpen(false)}>
         <div
           role="dialog"
           aria-label={label}
-          className="rounded-2xl border border-gray-200 bg-white p-3 shadow-elevated dark:border-white/10 dark:bg-brand-navy-800"
+          className="rounded-[2px] border border-brand-navy/10 bg-white p-4 shadow-elevated dark:border-white/10 dark:bg-brand-navy-800"
         >
           <DayPicker
             mode="single"

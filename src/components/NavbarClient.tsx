@@ -12,18 +12,33 @@ import {
 import { defaultRouteForRole, isAllowedPathForRole } from "@/lib/routes";
 import ViewAsSelector from "@/components/ViewAsSelector";
 import ViewingAsBanner from "@/components/ViewingAsBanner";
-import CurrencySelector from "@/components/CurrencySelector";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const NAV_LINKS = [
   { href: "/",             label: "Inicio" },
-  { href: "/buscar",       label: "Buscar" },
+  { href: "/buscar",       label: "Hoteles y destinos" },
   { href: "/mis-reservas", label: "Mis reservas" },
 ];
 
+/** Páginas que abren con fotografía a sangre: el header flota encima. */
+function hasImmersiveHero(pathname: string): boolean {
+  return pathname === "/" || /^\/hotels\/[^/]+$/.test(pathname);
+}
+
+function Wordmark({ className = "" }: { className?: string }) {
+  return (
+    <span translate="no" className={`font-display text-[1.15rem] uppercase leading-none tracking-[0.32em] sm:text-[1.3rem] ${className}`}>
+      Hotel<span className="mx-[0.12em] inline-block h-[0.32em] w-[0.32em] translate-y-[-0.2em] rotate-45 border border-current opacity-70" aria-hidden="true" />Sync
+    </span>
+  );
+}
+
 function UserMenu({ profile, onLogout }: { profile: AuthProfile; onLogout: () => void }) {
   const [open, setOpen] = useState(false);
-  const initials = profile.email.slice(0, 2).toUpperCase();
+  const initials = (profile.name || profile.email).slice(0, 2).toUpperCase();
+
+  const item =
+    "flex w-full items-center gap-3 px-5 py-2.5 text-[0.875rem] text-brand-navy/80 transition-colors hover:bg-brand-navy/[0.04] hover:text-brand-navy dark:text-white/75 dark:hover:bg-white/5 dark:hover:text-white";
 
   return (
     <div className="relative">
@@ -33,16 +48,11 @@ function UserMenu({ profile, onLogout }: { profile: AuthProfile; onLogout: () =>
         aria-expanded={open}
         aria-haspopup="true"
         aria-label={`Menú de ${profile.name || profile.email}`}
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-brand-gold text-xs font-bold text-brand-navy shadow-gold transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-current text-[0.7rem] font-medium tracking-wider transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current"
       >
         {profile.picture_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={profile.picture_url}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="h-full w-full object-cover"
-          />
+          <img src={profile.picture_url} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
         ) : (
           initials
         )}
@@ -50,69 +60,21 @@ function UserMenu({ profile, onLogout }: { profile: AuthProfile; onLogout: () =>
 
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="animate-scale-in absolute right-0 top-11 z-40 min-w-52 overflow-hidden rounded-2xl border border-white/10 bg-white shadow-elevated dark:bg-brand-navy-800">
-            <div className="border-b border-gray-100 px-4 py-3 dark:border-white/6">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-gray-400">Conectado como</p>
-                <span className="rounded bg-brand-gold/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand-gold">
-                  {VIEW_AS_LABELS[profile.role as ViewAsRole] ?? profile.role}
-                </span>
-              </div>
-              <p className="mt-1 truncate text-sm font-medium text-brand-navy dark:text-gray-100">
-                {profile.name || profile.email}
-              </p>
-              {profile.name && (
-                <p className="truncate text-xs text-gray-400">{profile.email}</p>
-              )}
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden="true" />
+          <div className="animate-scale-in absolute right-0 top-12 z-40 w-64 origin-top-right overflow-hidden rounded-[2px] border border-brand-navy/10 bg-white text-brand-navy shadow-elevated dark:border-white/10 dark:bg-brand-navy-800 dark:text-white">
+            <div className="border-b border-brand-navy/8 px-5 py-4 dark:border-white/8">
+              <p className="eyebrow">{VIEW_AS_LABELS[profile.role as ViewAsRole] ?? profile.role}</p>
+              <p className="mt-1.5 truncate font-display text-lg">{profile.name || profile.email}</p>
+              {profile.name && <p className="truncate text-xs text-brand-navy/50 dark:text-white/45">{profile.email}</p>}
             </div>
-            <div className="py-1">
-              <Link
-                href="/cuenta/perfil"
-                onClick={() => setOpen(false)}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-                Mi perfil
-              </Link>
-              <Link
-                href="/mis-reservas"
-                onClick={() => setOpen(false)}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-                </svg>
-                Mis reservas
-              </Link>
+            <div className="py-2">
+              <Link href="/cuenta/perfil" onClick={() => setOpen(false)} className={item}>Mi perfil</Link>
+              <Link href="/mis-reservas" onClick={() => setOpen(false)} className={item}>Mis reservas</Link>
               {profile.role !== "GUEST" && (
-                <Link
-                  href="/admin"
-                  onClick={() => setOpen(false)}
-                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Administrar
-                </Link>
+                <Link href="/admin" onClick={() => setOpen(false)} className={item}>Administrar</Link>
               )}
-              <div className="my-1 h-px bg-gray-100 dark:bg-white/6" />
-              <button
-                type="button"
-                onClick={onLogout}
-                className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
+              <div className="mx-5 my-2 h-px bg-brand-navy/8 dark:bg-white/8" />
+              <button type="button" onClick={onLogout} className={`${item} text-red-700 dark:text-red-300`}>
                 Cerrar sesión
               </button>
             </div>
@@ -129,9 +91,6 @@ export default function NavbarClient() {
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const loadingRef = useRef(true);
-  const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const { viewAs, viewedRole, setViewAs } = useViewAs(profile?.role ?? null);
 
   const loadProfile = useCallback(async () => {
     const p = await me();
@@ -139,6 +98,15 @@ export default function NavbarClient() {
     setProfileLoading(false);
     loadingRef.current = false;
   }, []);
+  const [atTop, setAtTop] = useState(true);
+  const [hidden, setHidden] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { viewAs, viewedRole, setViewAs } = useViewAs(profile?.role ?? null);
+
+  const immersive = hasImmersiveHero(pathname);
+  const overlay = immersive && atTop && !mobileOpen;
+  const isAdmin = pathname.startsWith("/admin");
+  const isGuestView = !viewedRole || viewedRole === "GUEST" || ((viewedRole === "SUPER_ADMIN" || viewedRole === "MANAGER") && !isAdmin);
 
   const navLinks = (() => {
     switch (viewedRole) {
@@ -147,7 +115,7 @@ export default function NavbarClient() {
       case "HOUSEKEEPER":
         return [{ href: "/admin/housekeeping", label: "Limpieza" }];
       case "MANAGER":
-        if (pathname.startsWith("/admin")) {
+        if (isAdmin) {
           return [
             { href: "/admin", label: "Panel" },
             { href: "/admin/hotels", label: "Hoteles" },
@@ -157,11 +125,11 @@ export default function NavbarClient() {
         }
         return [
           { href: "/", label: "Inicio" },
-          { href: "/buscar", label: "Buscar" },
-          { href: "/admin", label: "Panel de Gestión" },
+          { href: "/buscar", label: "Hoteles y destinos" },
+          { href: "/admin", label: "Panel de gestión" },
         ];
       case "SUPER_ADMIN":
-        if (pathname.startsWith("/admin")) {
+        if (isAdmin) {
           return [
             { href: "/admin", label: "Panel" },
             { href: "/admin/hotels", label: "Hoteles" },
@@ -207,17 +175,44 @@ export default function NavbarClient() {
     }
   }, [profile, viewAs, viewedRole, pathname, router]);
 
+  // Header: transparente sobre la foto, sólido al bajar; se esconde al
+  // bajar rápido y vuelve a aparecer apenas el usuario sube.
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 8);
+    let lastY = window.scrollY;
+    let ticking = false;
+    const handler = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        setAtTop(y < 24);
+        if (y > 320 && y > lastY + 4) setHidden(true);
+        else if (y < lastY - 4 || y < 320) setHidden(false);
+        lastY = y;
+        ticking = false;
+      });
+    };
     window.addEventListener("scroll", handler, { passive: true });
     handler();
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Bloquea el scroll del body con el menú móvil abierto.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMobileOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [mobileOpen]);
 
   async function handleLogout() {
     await logout();
@@ -226,134 +221,161 @@ export default function NavbarClient() {
     router.refresh();
   }
 
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
   return (
     <>
-    <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "border-b border-white/10 bg-white/80 backdrop-blur-xl shadow-sm dark:bg-brand-navy/80"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-        {/* Logo */}
-        <Link
-          href="/"
-          translate="no"
-          className="font-display text-xl font-semibold text-brand-navy transition-opacity hover:opacity-80 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
-        >
-          Hotel<span className="text-brand-gold">Sync</span>
-        </Link>
+      <header
+        className={`fixed inset-x-0 top-0 z-50 transition-[transform,background-color,color,border-color] duration-500 ease-silk ${
+          hidden && !mobileOpen ? "-translate-y-full" : "translate-y-0"
+        } ${
+          overlay
+            ? "border-b border-white/15 bg-transparent text-white"
+            : mobileOpen
+              ? "border-b border-transparent bg-transparent text-white"
+              : "border-b border-brand-navy/10 bg-brand-paper/90 text-brand-navy backdrop-blur-md dark:border-white/10 dark:bg-brand-navy-900/90 dark:text-white"
+        }`}
+      >
+        {/* Velo superior para que el texto blanco lea sobre cualquier foto */}
+        {overlay && (
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-40 bg-gradient-to-b from-black/45 to-transparent" />
+        )}
 
-        {/* Desktop Nav (esqueleto mientras se resuelve la sesión: evita el flash de menú guest) */}
-        {profileLoading ? (
-          <div
-            aria-hidden="true"
-            className="hidden h-9 w-48 animate-pulse rounded-lg bg-gray-200/70 dark:bg-white/10 md:block"
-          />
-        ) : (
-          <nav aria-label="Principal" className="hidden items-center gap-1 md:flex">
-            {navLinks.map((link) => (
+        <div className="shell grid h-[var(--header-h)] grid-cols-[1fr_auto_1fr] items-center gap-4">
+          {/* Izquierda: menú móvil / navegación */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setMobileOpen((v) => !v)}
+              aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={mobileOpen}
+              className="group -ml-2 flex h-10 items-center gap-3 px-2 lg:hidden"
+            >
+              <span className="relative block h-3 w-6" aria-hidden="true">
+                <span className={`absolute left-0 top-0 h-px w-6 bg-current transition-transform duration-500 ease-silk ${mobileOpen ? "translate-y-1.5 rotate-45" : ""}`} />
+                <span className={`absolute bottom-0 left-0 h-px bg-current transition-all duration-500 ease-silk ${mobileOpen ? "w-6 -translate-y-1.5 -rotate-45" : "w-4"}`} />
+              </span>
+              <span className="hidden text-[0.75rem] uppercase tracking-label sm:inline">{mobileOpen ? "Cerrar" : "Menú"}</span>
+            </button>
+
+            {profileLoading ? (
+              <div aria-hidden="true" className="hidden h-3 w-56 animate-pulse rounded-full bg-current opacity-10 lg:block" />
+            ) : (
+              <nav aria-label="Principal" className="-ml-3 hidden items-center lg:flex">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    aria-current={isActive(link.href) ? "page" : undefined}
+                    className={`nav-link px-3 py-2 ${isActive(link.href) ? "opacity-100 after:scale-x-100" : ""}`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
+          </div>
+
+          {/* Centro: marca */}
+          <Link href="/" aria-label="HotelSync — inicio" className="justify-self-center transition-opacity hover:opacity-80">
+            <Wordmark />
+          </Link>
+
+          {/* Derecha: acciones */}
+          <div className="flex items-center justify-end gap-1 sm:gap-2">
+            {profile?.role === "SUPER_ADMIN" && (
+              <div className="hidden xl:block">
+                <ViewAsSelector viewAs={viewAs} onSelect={handleSelectRole} />
+              </div>
+            )}
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
+
+            {profile ? (
+              <UserMenu profile={profile} onLogout={handleLogout} />
+            ) : profileLoading ? (
+              <span aria-hidden="true" className="hidden h-9 w-9 animate-pulse rounded-full bg-current opacity-10 md:block" />
+            ) : (
+              <Link href="/cuenta/entrar" className="nav-link hidden px-3 py-2 md:inline-block">
+                Entrar
+              </Link>
+            )}
+
+            {isGuestView && (
+              <Link
+                href="/buscar"
+                className={`ml-1 inline-flex items-center rounded-[2px] border px-4 py-2.5 text-[0.6875rem] font-medium uppercase tracking-label transition-colors duration-300 sm:px-5 ${
+                  overlay || mobileOpen
+                    ? "border-white/70 hover:bg-white hover:text-brand-navy"
+                    : "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-700 dark:border-white dark:bg-white dark:text-brand-navy dark:hover:bg-brand-stone"
+                }`}
+              >
+                Reservar
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {viewAs && !mobileOpen && (
+          <ViewingAsBanner viewAs={viewAs} onExit={() => handleSelectRole(null)} />
+        )}
+      </header>
+
+      {/* Menú a pantalla completa (móvil / tablet) */}
+      <div
+        aria-hidden={!mobileOpen}
+        className={`fixed inset-0 z-40 bg-brand-navy-900 text-white transition-[opacity,visibility] duration-500 ease-silk lg:hidden ${
+          mobileOpen ? "visible opacity-100" : "invisible opacity-0"
+        }`}
+      >
+        <div className="shell flex h-full flex-col pb-10 pt-[calc(var(--header-h)+2rem)]">
+          <nav aria-label="Menú móvil" className="flex flex-col">
+            {navLinks.map((link, i) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`nav-link px-3 py-2 rounded-lg ${
-                  pathname === link.href
-                    ? "text-brand-gold after:w-full"
-                    : ""
-                }`}
+                tabIndex={mobileOpen ? 0 : -1}
+                style={{ transitionDelay: mobileOpen ? `${120 + i * 70}ms` : "0ms" }}
+                className={`flex items-baseline justify-between border-b border-white/10 py-5 font-display text-[2.1rem] leading-none transition-[opacity,transform] duration-700 ease-silk ${
+                  mobileOpen ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
+                } ${isActive(link.href) ? "text-brand-gold-300" : ""}`}
               >
                 {link.label}
+                <span className="text-[0.6875rem] tracking-label text-white/40">0{i + 1}</span>
               </Link>
             ))}
           </nav>
-        )}
 
-        {/* Right side */}
-        <div className="flex items-center gap-2">
-          {profile?.role === "SUPER_ADMIN" && (
-            <div className="hidden md:block">
-              <ViewAsSelector viewAs={viewAs} onSelect={handleSelectRole} />
-            </div>
-          )}
-          <CurrencySelector />
-          <ThemeToggle />
-
-          {profile ? (
-            <UserMenu profile={profile} onLogout={handleLogout} />
-          ) : profileLoading ? (
-            <span
-              aria-hidden="true"
-              className="hidden h-9 w-9 animate-pulse rounded-full bg-gray-200/70 dark:bg-white/10 md:block"
-            />
-          ) : (
-            <Link
-              href="/cuenta/entrar"
-              className="btn-ghost hidden md:inline-flex"
-            >
-              Entrar
-            </Link>
-          )}
-
-          {/* Mobile hamburger */}
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Menú"
-            aria-expanded={mobileOpen}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-brand-navy transition-colors hover:bg-brand-navy/8 dark:text-white dark:hover:bg-white/8 md:hidden"
+          <div
+            style={{ transitionDelay: mobileOpen ? "420ms" : "0ms" }}
+            className={`mt-auto space-y-5 transition-opacity duration-700 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              {mobileOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              )}
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="animate-slide-up-sm border-t border-gray-100 bg-white px-4 pb-4 dark:border-white/6 dark:bg-brand-navy-800 md:hidden">
-          <nav className="flex flex-col gap-1 pt-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                  pathname === link.href
-                    ? "bg-brand-gold/10 text-brand-gold"
-                    : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
             {profile?.role === "SUPER_ADMIN" && (
-              <div className="mt-1 border-t border-gray-100 pt-2 dark:border-white/6">
+              <div className="rounded-[2px] border border-white/15 [&_button]:text-white">
                 <ViewAsSelector viewAs={viewAs} onSelect={handleSelectRole} compact />
               </div>
             )}
-            {!profile && !profileLoading && (
-              <Link
-                href="/cuenta/entrar"
-                className="mt-2 rounded-xl bg-brand-gold px-4 py-3 text-center text-sm font-semibold text-brand-navy"
-              >
-                Entrar a mi cuenta
-              </Link>
-            )}
-          </nav>
+            <div className="flex items-center justify-between">
+              {!profile && !profileLoading ? (
+                <Link href="/cuenta/entrar" tabIndex={mobileOpen ? 0 : -1} className="link-line">
+                  Entrar a mi cuenta
+                </Link>
+              ) : profile ? (
+                <Link href="/cuenta/perfil" tabIndex={mobileOpen ? 0 : -1} className="link-line">
+                  Mi perfil
+                </Link>
+              ) : (
+                <span />
+              )}
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
-      )}
-    </header>
-    {viewAs && (
-      <ViewingAsBanner
-        viewAs={viewAs}
-        onExit={() => handleSelectRole(null)}
-      />
-    )}
+      </div>
+
+      {/* Espaciador en páginas sin hero inmersivo */}
+      {!immersive && <div aria-hidden="true" className={viewAs ? "h-[calc(var(--header-h)+34px)]" : "h-[var(--header-h)]"} />}
     </>
   );
 }

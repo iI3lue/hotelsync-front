@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import HousekeepingBoard from "./board";
 
 export const metadata: Metadata = {
-  title: "Limpieza — HotelSync Admin",
+  title: "Limpieza · Admin",
   description: "Tareas de limpieza: mis tareas y cola del hotel.",
 };
 

@@ -2,33 +2,20 @@
 
 import { useEffect, useState } from "react";
 import type { RoomType, SearchState } from "@/lib/api";
-import { withSearch } from "@/lib/api";
-import Money from "@/components/Money";
+import { formatPrice, withSearch } from "@/lib/api";
 import { me, type AuthProfile } from "@/lib/auth-client";
 import { updateRoomType } from "@/lib/api-client";
+import { roomImage } from "@/lib/imagery";
+import Photo from "@/components/ui/Photo";
+import Arrow from "@/components/ui/Arrow";
+import { AmenityList } from "@/components/ui/Amenity";
 
 interface RoomTypeCardProps {
   roomType: RoomType;
   search?: SearchState;
+  /** Posición en la lista: alterna foto izquierda/derecha. */
+  index?: number;
 }
-
-/* ─── Amenity icon mapping ───────────────────────────────────── */
-const AMENITY_ICONS: Record<string, string> = {
-  wifi: "📶",
-  pool: "🏊",
-  spa: "💆",
-  gym: "🏋️",
-  breakfast: "🍳",
-  ac: "❄️",
-  air_conditioning: "❄️",
-  tv: "📺",
-  parking: "🚗",
-  ocean_view: "🌊",
-  beach_view: "🏖️",
-  balcony: "🌅",
-  minibar: "🍷",
-  room_service: "🛎️",
-};
 
 const ROOM_PRESET_IMAGES = [
   {
@@ -63,9 +50,9 @@ function fallbackImage(name: string): string {
   return ROOM_PRESET_IMAGES[1].url;
 }
 
-export default function RoomTypeCard({ roomType, search }: RoomTypeCardProps) {
+export default function RoomTypeCard({ roomType, search, index = 0 }: RoomTypeCardProps) {
   const [imageUrl, setImageUrl] = useState<string>(
-    roomType.image_url || fallbackImage(roomType.name)
+    roomImage(roomType, 1600)
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tempUrl, setTempUrl] = useState("");
@@ -89,6 +76,13 @@ export default function RoomTypeCard({ roomType, search }: RoomTypeCardProps) {
     { room_type_id: roomType.room_type_id, date: undefined }
   );
 
+  const bookHref = withSearch("/reservas/nueva", search, {
+    hotel: roomType.hotel_id,
+    room_type_id: roomType.room_type_id,
+    date: undefined,
+  });
+  const flip = index % 2 === 1;
+
   const handleSavePhoto = async () => {
     if (!tempUrl.trim()) return;
     setIsSaving(true);
@@ -110,28 +104,17 @@ export default function RoomTypeCard({ roomType, search }: RoomTypeCardProps) {
   };
 
   return (
-    <article className="group relative flex flex-col justify-between overflow-hidden rounded-2.5xl border border-brand-navy/8 bg-white shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-brand-gold/40 hover:shadow-card-hover dark:border-white/8 dark:bg-brand-navy-800">
-      {/* ── Foto de la Habitación ── */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900">
-        <img
+    <article className="group grid items-center gap-8 md:grid-cols-12 md:gap-12">
+      {/* ── Foto ── */}
+      <div
+        data-reveal="image"
+        className={`relative aspect-[4/3] w-full overflow-hidden bg-brand-stone dark:bg-brand-navy-800 md:col-span-7 ${flip ? "md:order-2" : ""}`}
+      >
+        <Photo
           src={imageUrl}
           alt={roomType.name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-1200 ease-silk group-hover:scale-[1.03]"
         />
-
-        {/* Gradiente para legibilidad */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-        {/* Badge de capacidad */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
-          <svg className="h-3.5 w-3.5 text-brand-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-          </svg>
-          <span>
-            {roomType.capacity} {roomType.capacity === 1 ? "huésped" : "huéspedes"}
-          </span>
-        </div>
 
         {/* Botón para Agregar / Cambiar Foto (solo staff con permiso real) */}
         {canEditPhoto && (
@@ -142,72 +125,44 @@ export default function RoomTypeCard({ roomType, search }: RoomTypeCardProps) {
               setIsModalOpen(true);
             }}
             title="Agregar o cambiar foto de la habitación"
-            className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/30 transition-all hover:bg-white/40 hover:scale-105 cursor-pointer"
+            className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3.5 py-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-brand-navy backdrop-blur transition-colors hover:bg-white"
           >
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-            </svg>
-            <span>Foto</span>
+            Cambiar foto
           </button>
         )}
       </div>
 
-      {/* ── Contenido de la Habitación ── */}
-      <div className="flex flex-1 flex-col justify-between p-6">
-        <div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className="font-heading text-xl font-bold text-brand-navy dark:text-white">
-                {roomType.name}
-              </h3>
-            </div>
+      {/* ── Texto ── */}
+      <div
+        data-reveal=""
+        style={{ ["--reveal-delay" as string]: "150ms" }}
+        className={`md:col-span-5 ${flip ? "md:order-1 md:pr-4" : "md:pl-4"}`}
+      >
+        <p className="eyebrow">
+          Hasta {roomType.capacity} {roomType.capacity === 1 ? "huésped" : "huéspedes"}
+        </p>
+        <h3 className="mt-4 font-display text-display-sm text-brand-navy dark:text-white">
+          {roomType.name}
+        </h3>
 
-            <div className="text-right shrink-0">
-              <span className="block text-[11px] uppercase tracking-wider text-slate-400">Desde</span>
-              <div className="text-xl font-extrabold tracking-tight text-brand-navy dark:text-white tabular-nums">
-                <Money amountCOP={roomType.base_rate} />
-              </div>
-              <span className="text-xs text-slate-500 dark:text-slate-400">/ noche</span>
-            </div>
-          </div>
+        {roomType.amenities && roomType.amenities.length > 0 && (
+          <AmenityList amenities={roomType.amenities} className="mt-7" />
+        )}
 
-          {/* Comodidades */}
-          {roomType.amenities && roomType.amenities.length > 0 && (
-            <div className="mt-4">
-              <ul className="flex flex-wrap gap-1.5" aria-label="Comodidades de la habitación">
-                {roomType.amenities.map((amenity) => {
-                  const icon = AMENITY_ICONS[amenity.toLowerCase()] ?? "✨";
-                  return (
-                    <li
-                      key={amenity}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-slate-100/80 px-2.5 py-1 text-xs font-medium text-slate-700 dark:bg-brand-navy-700/60 dark:text-slate-300"
-                    >
-                      <span aria-hidden="true">{icon}</span>
-                      <span className="capitalize">{amenity.replace(/_/g, " ")}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )}
+        <div className="mt-9 flex items-end justify-between gap-6 border-t border-brand-navy/12 pt-6 dark:border-white/12">
+          <p className="leading-tight text-brand-navy dark:text-white">
+            <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/50">Desde</span>
+            <span className="font-display text-[2rem] tabular-nums">{formatPrice(roomType.base_rate)}</span>
+            <span className="ml-1.5 text-[0.85rem] text-brand-navy/50 dark:text-white/50">/ noche</span>
+          </p>
         </div>
 
-        {/* ── Footer de Acción ── */}
-        <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-white/10">
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Cancelación flexible
-          </span>
-          <a
-            href={availabilityHref}
-            aria-label={`Ver disponibilidad de ${roomType.name}`}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-gold to-amber-500 px-4 py-2.5 text-sm font-bold text-brand-navy shadow-gold transition-all duration-200 hover:brightness-105 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold cursor-pointer"
-          >
-            <span>Ver disponibilidad</span>
-            <svg className="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
+        <div className="mt-8 flex flex-wrap items-center gap-x-8 gap-y-4">
+          <a href={availabilityHref} aria-label={`Ver disponibilidad de ${roomType.name}`} className="btn-primary">
+            Ver disponibilidad
+          </a>
+          <a href={bookHref} aria-label={`Reservar ${roomType.name}`} className="link-line text-brand-navy dark:text-white">
+            Reservar <Arrow className="h-2.5 w-5" />
           </a>
         </div>
       </div>
@@ -219,17 +174,18 @@ export default function RoomTypeCard({ roomType, search }: RoomTypeCardProps) {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in"
         >
-          <div className="w-full max-w-md rounded-3xl border border-brand-navy/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-navy-800">
+          <div className="w-full max-w-md rounded-[2px] bg-white p-7 shadow-elevated dark:bg-brand-navy-800">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-              <h4 className="font-heading text-lg font-bold text-brand-navy dark:text-white">
+              <h4 className="font-display text-xl text-brand-navy dark:text-white">
                 Foto de {roomType.name}
               </h4>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+                aria-label="Cerrar"
+                className="p-1 text-brand-navy/50 hover:text-brand-navy dark:text-white/50 dark:hover:text-white"
               >
-                ✕
+                <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" aria-hidden="true"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.2" /></svg>
               </button>
             </div>
 

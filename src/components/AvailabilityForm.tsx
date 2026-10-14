@@ -14,6 +14,8 @@ import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import Spinner from "@/components/Spinner";
 import { me, type AuthProfile } from "@/lib/auth-client";
 import { updateRoomType } from "@/lib/api-client";
+import { AmenityList } from "@/components/ui/Amenity";
+import Arrow from "@/components/ui/Arrow";
 
 interface AvailabilityFormProps {
   hotelId: string;
@@ -136,36 +138,23 @@ export default function AvailabilityForm({
     }
   };
 
-  return (
-    <div className="space-y-6">
-      {/* ── 1. Habitación Seleccionada y Selector Visual (Sin selects ilegibles) ── */}
-      <div className="rounded-2.5xl border border-brand-navy/8 bg-white p-6 shadow-card dark:border-white/8 dark:bg-brand-navy-800">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-          <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-brand-gold">
-              Habitación elegida
-            </span>
-            <h2 className="font-heading text-xl font-bold text-white">
-              {selectedRoom ? selectedRoom.name : "Seleccioná una habitación"}
-            </h2>
-          </div>
-          {roomTypes.length > 1 && (
-            <span className="text-xs text-slate-300">
-              Podés cambiar de habitación con un clic abajo
-            </span>
-          )}
-        </div>
+  const resultDate = date || submitted?.date || "";
+  const bookHref = withSearch("/reservas/nueva", search, {
+    hotel: hotelId,
+    room_type_id: roomId,
+    date: resultDate || undefined,
+  });
 
-        {/* Tarjeta destacada de la habitación activa con foto */}
-        {selectedRoom && (
-          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-5 rounded-2xl border-2 border-brand-gold bg-brand-navy-800 p-4 shadow-gold dark:bg-brand-navy-900">
-            {/* Foto de la habitación */}
-            <div className="relative aspect-[16/10] md:aspect-auto md:h-full w-full overflow-hidden rounded-xl bg-slate-900">
-              <img
-                src={activeRoomPhoto}
-                alt={selectedRoom.name}
-                className="h-full w-full object-cover"
-              />
+  return (
+    <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+      {/* ── 1. Habitación elegida (fija al costado en escritorio) ── */}
+      <aside className="lg:sticky lg:top-24 lg:self-start">
+        <p className="eyebrow">Habitación elegida</p>
+        {selectedRoom ? (
+          <div className="mt-5 animate-notice-in" key={selectedRoom.room_type_id}>
+            <div className="relative aspect-[4/3] w-full overflow-hidden bg-brand-stone dark:bg-brand-navy-800">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={activeRoomPhoto} alt={selectedRoom.name} className="h-full w-full object-cover" />
               {canEditPhoto && (
                 <button
                   type="button"
@@ -173,213 +162,181 @@ export default function AvailabilityForm({
                     setPhotoUrlInput(activeRoomPhoto);
                     setIsPhotoModalOpen(true);
                   }}
-                  className="absolute right-2 top-2 inline-flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/20 hover:bg-black/80 transition-colors"
+                  className="absolute right-3 top-3 rounded-full bg-white/90 px-3.5 py-1.5 text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-brand-navy backdrop-blur transition-colors hover:bg-white"
                   title="Cambiar o agregar foto"
                 >
-                  <svg className="h-3.5 w-3.5 text-brand-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                  </svg>
-                  <span>Cambiar foto</span>
+                  Cambiar foto
                 </button>
               )}
             </div>
-
-            {/* Datos de la habitación */}
-            <div className="md:col-span-2 flex flex-col justify-between space-y-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-gold/20 px-2.5 py-0.5 text-xs font-bold text-brand-gold">
-                    Capacidad: {selectedRoom.capacity} {selectedRoom.capacity === 1 ? "huésped" : "huéspedes"}
-                  </span>
-                  <span className="text-xs text-emerald-300 font-medium">
-                    ✓ Confirmación directa
-                  </span>
-                </div>
-
-                <div className="mt-2 text-2xl font-extrabold text-white tabular-nums">
-                  {formatPrice(selectedRoom.base_rate)}{" "}
-                  <span className="text-xs font-normal text-slate-300">/ noche</span>
-                </div>
-
-                {selectedRoom.amenities && selectedRoom.amenities.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {selectedRoom.amenities.map((a) => (
-                      <span
-                        key={a}
-                        className="rounded-lg bg-white/10 px-2 py-0.5 text-[11px] font-medium text-slate-100 border border-white/15 capitalize"
-                      >
-                        {a.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs text-slate-300">
-                Seleccioná abajo tu fecha de llegada para consultar los cupos disponibles en tiempo real.
-              </p>
-            </div>
+            <h2 className="mt-6 font-display text-[2rem] leading-tight text-brand-navy dark:text-white">{selectedRoom.name}</h2>
+            <p className="mt-1 text-[0.9rem] text-brand-navy/60 dark:text-white/55">
+              Hasta {selectedRoom.capacity} {selectedRoom.capacity === 1 ? "huésped" : "huéspedes"}
+            </p>
+            {selectedRoom.amenities && selectedRoom.amenities.length > 0 && (
+              <AmenityList amenities={selectedRoom.amenities} className="mt-5" />
+            )}
+            <p className="mt-6 border-t border-brand-navy/12 pt-5 text-brand-navy dark:border-white/12 dark:text-white">
+              <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/50">Desde</span>
+              <span className="font-display text-[2rem] tabular-nums">{formatPrice(selectedRoom.base_rate)}</span>
+              <span className="ml-1.5 text-[0.85rem] text-brand-navy/50 dark:text-white/50">/ noche</span>
+            </p>
           </div>
+        ) : (
+          <p className="mt-5 font-display text-[1.6rem] leading-snug text-brand-navy/70 dark:text-white/70">
+            Elegí una habitación para ver sus días libres.
+          </p>
         )}
+      </aside>
 
-        {/* Selector de habitaciones visual (pestañas legibles y atractivas) */}
-        {/* Si se llegó con habitación preseleccionada, arranca colapsado para no duplicar la elección. */}
+      <div className="min-w-0 space-y-12">
+        {/* Selector de habitaciones. Si se llegó con una preseleccionada, arranca colapsado. */}
         {roomTypes.length > 1 && (
-          <div>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                Cambiar a otro tipo de habitación de este hotel
-              </label>
+          <section aria-labelledby="room-switch-title">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-navy/12 pb-4 dark:border-white/12">
+              <h3 id="room-switch-title" className="eyebrow">
+                {initialRoomTypeId ? "Otras habitaciones de este hotel" : "1 · Elegí la habitación"}
+              </h3>
               {initialRoomTypeId && (
                 <button
                   type="button"
                   onClick={() => setShowSwitcher((v) => !v)}
                   aria-expanded={showSwitcher}
-                  className="rounded-full border border-brand-gold/40 px-3 py-1 text-xs font-semibold text-brand-gold transition-colors hover:bg-brand-gold/10"
+                  className="text-eyebrow uppercase text-brand-navy underline underline-offset-4 dark:text-white"
                 >
-                  {showSwitcher ? "Ocultar opciones" : `Cambiar habitación (${roomTypes.length} opciones)`}
+                  {showSwitcher ? "Ocultar" : `Ver ${roomTypes.length} opciones`}
                 </button>
               )}
             </div>
             {(showSwitcher || !initialRoomTypeId) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {roomTypes.map((room) => {
-                const isActive = room.room_type_id === roomId;
-                return (
-                  <button
-                    key={room.room_type_id}
-                    type="button"
-                    onClick={() => {
-                      setRoomId(room.room_type_id);
-                    }}
-                    className={`flex items-center justify-between rounded-xl p-3 text-left transition-all cursor-pointer ${
-                      isActive
-                        ? "border-2 border-brand-gold bg-brand-gold/20 shadow-sm text-white"
-                        : "border border-white/15 bg-white/5 hover:border-brand-gold/50 hover:bg-white/10 text-slate-100"
+              <ul className="animate-notice-in">
+                {roomTypes.map((room) => {
+                  const isActive = room.room_type_id === roomId;
+                  return (
+                    <li key={room.room_type_id} className="border-b border-brand-navy/10 dark:border-white/10">
+                      <button
+                        type="button"
+                        aria-pressed={isActive}
+                        onClick={() => setRoomId(room.room_type_id)}
+                        className="group flex w-full items-center justify-between gap-4 py-4 text-left"
+                      >
+                        <span className="flex min-w-0 items-center gap-4">
+                          <span
+                            aria-hidden="true"
+                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                              isActive ? "border-brand-navy dark:border-white" : "border-brand-navy/30 dark:border-white/30"
+                            }`}
+                          >
+                            <span className={`h-2 w-2 rounded-full bg-brand-navy transition-transform duration-300 dark:bg-white ${isActive ? "scale-100" : "scale-0"}`} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[1rem] text-brand-navy dark:text-white">{room.name}</span>
+                            <span className="text-[0.8rem] text-brand-navy/50 dark:text-white/45">Hasta {room.capacity} huéspedes</span>
+                          </span>
+                        </span>
+                        <span className="shrink-0 tabular-nums text-[0.95rem] text-brand-navy/80 dark:text-white/75">
+                          {formatPrice(room.base_rate)} <span className="text-[0.75rem] text-brand-navy/45 dark:text-white/40">/ noche</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        )}
+
+        {/* ── 2. Calendario ── */}
+        <section aria-labelledby="cal-title">
+          <fieldset className="min-w-0">
+            <legend id="cal-title" className="eyebrow w-full border-b border-brand-navy/12 pb-4 dark:border-white/12">
+              {roomTypes.length > 1 && !initialRoomTypeId ? "2 · Elegí la fecha de llegada" : "Elegí la fecha de llegada"}
+            </legend>
+            <div className="pt-8">
+              <AvailabilityCalendar
+                roomTypeId={roomId || undefined}
+                selected={date || undefined}
+                onSelect={(selectedIso) => {
+                  setDate(selectedIso);
+                }}
+              />
+            </div>
+            <p className="mt-4 text-center text-[0.8rem] text-brand-navy/50 dark:text-white/45">
+              {roomId
+                ? "Los días subrayados en verde tienen habitaciones libres."
+                : "Elegí una habitación para ver los días disponibles."}
+            </p>
+          </fieldset>
+
+          {/* ── 3. Resultado ── */}
+          <div aria-live="polite" className="mt-10">
+            {error ? (
+              <p role="alert" className="animate-notice-in border-l-2 border-red-600 bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-300">
+                No pudimos consultar esa fecha. Probá con otro día o recargá la página.
+              </p>
+            ) : null}
+
+            {isPending || isLoading ? (
+              <div className="flex items-center gap-3 border-t border-brand-navy/12 py-6 text-sm text-brand-navy/60 dark:border-white/12 dark:text-white/55">
+                <Spinner label="Consultando cupos en vivo…" />
+                <span>Consultando disponibilidad…</span>
+              </div>
+            ) : data && resultDate ? (
+              <div
+                key={`${submitted?.roomId}-${submitted?.date}`}
+                className="animate-notice-in border border-brand-navy/12 bg-white p-6 dark:border-white/12 dark:bg-brand-navy-800 md:p-8"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="eyebrow">Llegada</p>
+                    <h3 className="mt-2 font-display text-[1.75rem] leading-tight text-brand-navy dark:text-white">
+                      {formatDate(resultDate)}
+                    </h3>
+                    {selectedRoom ? (
+                      <p className="mt-1 text-[0.9rem] text-brand-navy/60 dark:text-white/55">
+                        {selectedRoom.name} · {formatPrice(selectedRoom.base_rate)} / noche
+                      </p>
+                    ) : null}
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.6875rem] font-medium uppercase tracking-[0.12em] ${
+                      data.available > 0
+                        ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200"
+                        : "bg-red-50 text-red-800 dark:bg-red-950/60 dark:text-red-200"
                     }`}
                   >
-                    <div className="min-w-0 pr-2">
-                      <div className="font-semibold text-sm truncate">{room.name}</div>
-                      <div className="text-xs text-slate-300">
-                        {room.capacity} pers. · {formatPrice(room.base_rate)}/noche
-                      </div>
-                    </div>
-                    {isActive ? (
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-gold text-brand-navy text-xs font-bold">
-                        ✓
-                      </span>
-                    ) : (
-                      <span className="text-xs text-brand-gold font-medium">Elegir</span>
-                    )}
-                  </button>
-                );
-              })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── 2. Calendario de Disponibilidad ── */}
-      <div className="rounded-2.5xl border border-brand-navy/8 bg-white p-6 shadow-card md:p-8 dark:border-white/8 dark:bg-brand-navy-800">
-        <fieldset className="min-w-0">
-          <legend className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-            Elegí la fecha de tu estancia
-          </legend>
-          <AvailabilityCalendar
-            roomTypeId={roomId || undefined}
-            selected={date || undefined}
-            onSelect={(selectedIso) => {
-              setDate(selectedIso);
-            }}
-          />
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-            {roomId
-              ? "Los días destacados en verde cuentan con unidades físicas activas e inventario inmediato."
-              : "Elegí una habitación para ver los días disponibles."}
-          </p>
-        </fieldset>
-
-        {/* ── 3. Resultado de Disponibilidad ── */}
-        <div aria-live="polite" className="mt-6">
-          {error ? (
-            <p role="alert" className="animate-notice-in rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-400">
-              No se pudo consultar la disponibilidad para esa fecha. Probá con otro día o recargá la página.
-            </p>
-          ) : null}
-
-          {isPending || isLoading ? (
-            <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-brand-navy-700/60 dark:text-slate-300">
-              <Spinner label="Consultando cupos en vivo…" />
-              <span>Verificando disponibilidad en tiempo real…</span>
-            </div>
-          ) : data && (date || submitted?.date) ? (
-            <div
-              key={`${submitted?.roomId}-${submitted?.date}`}
-              className="animate-notice-in rounded-2xl border border-brand-gold/30 bg-gradient-to-r from-brand-gold/10 via-amber-500/5 to-transparent p-5 dark:border-brand-gold/30 dark:bg-brand-navy-700/60"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="font-heading text-base font-bold text-brand-navy dark:text-white">
-                  Resultado para el {formatDate(date || submitted?.date || "")}
-                </h3>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-                    data.available > 0
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/40"
-                      : "bg-red-100 text-red-800 dark:bg-red-950/80 dark:text-red-300 border border-red-300/40"
-                  }`}
-                >
-                  {data.available > 0 ? "✓ Disponible" : "✗ Agotado"}
-                </span>
-              </div>
-
-              {selectedRoom ? (
-                <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
-                  {selectedRoom.name} · {formatPrice(selectedRoom.base_rate)}/noche
-                </p>
-              ) : null}
-
-              <p className="mt-3 text-sm tabular-nums text-slate-700 dark:text-slate-200">
-                Habitaciones libres en inventario:{" "}
-                <strong className="text-lg font-bold text-brand-navy dark:text-white">
-                  {data.available}
-                </strong>
-              </p>
-
-              {data.available === 0 ? (
-                <p className="mt-2 font-semibold text-red-600 dark:text-red-400 text-sm">
-                  No hay cupos disponibles para esta fecha. Probá seleccionando otro día en el calendario.
-                </p>
-              ) : data.available <= 2 ? (
-                <p className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                  ¡Quedan solo {data.available} disponibles! Asegurá tu reserva ahora.
-                </p>
-              ) : null}
-
-              {data.available > 0 && (
-                <div className="mt-5">
-                  <a
-                    href={withSearch("/reservas/nueva", search, {
-                      hotel: hotelId,
-                      room_type_id: roomId,
-                      date: date || submitted?.date,
-                    })}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-gold to-amber-500 px-6 py-3 text-sm font-bold text-brand-navy shadow-gold transition-all duration-200 hover:brightness-105 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold cursor-pointer"
-                  >
-                    <span>Continuar con la reserva</span>
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  </a>
+                    <span className={`h-1.5 w-1.5 rounded-full ${data.available > 0 ? "bg-emerald-600" : "bg-red-600"}`} />
+                    {data.available > 0 ? "Disponible" : "Agotado"}
+                  </span>
                 </div>
-              )}
-            </div>
-          ) : !date ? (
-            <p className="text-xs text-slate-400 italic">
-              Tocá cualquier fecha en el calendario para consultar su stock.
-            </p>
-          ) : null}
-        </div>
+
+                <p className="mt-6 text-[0.95rem] text-brand-navy/70 dark:text-white/65">
+                  {data.available === 0 ? (
+                    "No quedan habitaciones de este tipo para esa fecha. Probá con otro día del calendario."
+                  ) : (
+                    <>
+                      <span className="tabular-nums text-brand-navy dark:text-white">{data.available}</span>{" "}
+                      {data.available === 1 ? "habitación libre" : "habitaciones libres"} para esa noche.
+                      {data.available <= 2 && (
+                        <span className="ml-1 text-brand-gold">Quedan pocas.</span>
+                      )}
+                    </>
+                  )}
+                </p>
+
+                {data.available > 0 && (
+                  <a href={bookHref} className="btn-primary mt-8">
+                    Continuar con la reserva <Arrow className="h-2.5 w-5" />
+                  </a>
+                )}
+              </div>
+            ) : !date ? (
+              <p className="border-t border-brand-navy/12 pt-6 text-[0.875rem] text-brand-navy/50 dark:border-white/12 dark:text-white/45">
+                Tocá una fecha del calendario para ver cuántas habitaciones quedan.
+              </p>
+            ) : null}
+          </div>
+        </section>
       </div>
 
       {/* ── Modal de Agregar / Cambiar Foto de Habitación ── */}
@@ -389,17 +346,18 @@ export default function AvailabilityForm({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in"
         >
-          <div className="w-full max-w-md rounded-3xl border border-brand-navy/10 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-brand-navy-800">
+          <div className="w-full max-w-md rounded-[2px] bg-white p-7 shadow-elevated dark:bg-brand-navy-800">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/10">
-              <h4 className="font-heading text-lg font-bold text-brand-navy dark:text-white">
+              <h4 className="font-display text-xl text-brand-navy dark:text-white">
                 Foto de {selectedRoom.name}
               </h4>
               <button
                 type="button"
                 onClick={() => setIsPhotoModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1"
+                aria-label="Cerrar"
+                className="p-1 text-brand-navy/50 hover:text-brand-navy dark:text-white/50 dark:hover:text-white"
               >
-                ✕
+                <svg viewBox="0 0 14 14" className="h-3.5 w-3.5" aria-hidden="true"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.2" /></svg>
               </button>
             </div>
 

@@ -6,7 +6,8 @@ import {
   type SearchState,
 } from "@/lib/api";
 import AvailabilityForm from "@/components/AvailabilityForm";
-import Breadcrumbs from "@/components/Breadcrumbs";
+import PageHeader from "@/components/ui/PageHeader";
+import LocalTime from "@/components/ui/LocalTime";
 
 export default async function AvailabilityPage({
   params,
@@ -47,49 +48,40 @@ export default async function AvailabilityPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8">
-      <Breadcrumbs
-        items={[
-          {
-            label: hotel?.name ?? "Hotel",
-            href: withSearch(`/hotels/${id}`, search),
-          },
+    <div>
+      <PageHeader
+        crumbs={[
+          { label: hotel?.name ?? "Hotel", href: withSearch(`/hotels/${id}`, search) },
           { label: "Disponibilidad" },
         ]}
+        eyebrow={hotel ? `${hotel.city} · ${hotel.country}` : "Disponibilidad"}
+        title="Fechas y tarifas"
+        lead={
+          hotel
+            ? <>Elegí habitación y fecha para ver cuántas quedan libres en <span className="text-brand-navy dark:text-white">{hotel.name}</span>.</>
+            : "Consultá disponibilidad en vivo por tipo de habitación y fecha."
+        }
+        aside={
+          hotel ? (
+            <dl className="text-right text-[0.875rem] text-brand-navy/60 dark:text-white/55">
+              {hotel.address && <dd>{hotel.address}</dd>}
+              <dd className="mt-1">
+                Hora local <LocalTime timeZone={hotel.timezone} className="text-brand-navy dark:text-white" />
+              </dd>
+            </dl>
+          ) : null
+        }
       />
-      <div className="mb-8">
-        <h1 className="font-heading text-3xl font-extrabold text-brand-navy dark:text-white md:text-4xl">
-          Disponibilidad y Tarifas
-        </h1>
-        {hotel ? (
-          <div className="mt-2 space-y-1">
-            <p className="text-slate-600 dark:text-slate-300 font-medium">
-              {hotel.name} · {hotel.city}, {hotel.country}
-            </p>
-            {hotel.address && (
-              <p className="text-xs text-brand-gold flex items-center gap-1.5 font-medium">
-                <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                </svg>
-                <span>{hotel.address}</span>
-              </p>
-            )}
-          </div>
-        ) : (
-          <p className="mt-2 text-slate-500 dark:text-slate-400">
-            Consultá disponibilidad en vivo por tipo de habitación y fecha.
-          </p>
-        )}
+      <div className="shell">
+        <AvailabilityForm
+          hotelId={id}
+          roomTypes={roomTypes}
+          initialRoomTypeId={room_type_id ?? ""}
+          initialDate={date ?? ""}
+          initialAvailability={availability}
+          search={search}
+        />
       </div>
-      <AvailabilityForm
-        hotelId={id}
-        roomTypes={roomTypes}
-        initialRoomTypeId={room_type_id ?? ""}
-        initialDate={date ?? ""}
-        initialAvailability={availability}
-        search={search}
-      />
     </div>
   );
 }

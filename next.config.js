@@ -33,6 +33,10 @@ const nextConfig = {
         source: "/api/billing/:path*",
         destination: `${process.env.NEXT_PUBLIC_BILLING_API_URL || "http://localhost:3007/v1"}/:path*`,
       },
+      {
+        source: "/api/loyalty/:path*",
+        destination: `${process.env.NEXT_PUBLIC_LOYALTY_API_URL || "http://localhost:3009/v1"}/:path*`,
+      }
     ];
   },
 };

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import CreateForm from "./form";
 
 export const metadata: Metadata = {
-  title: "Crear cuenta — HotelSync",
+  title: "Crear cuenta",
   description: "Creá tu cuenta de huésped gratis para gestionar tus reservas.",
 };
 

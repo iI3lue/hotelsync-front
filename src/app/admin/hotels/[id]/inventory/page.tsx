@@ -9,7 +9,6 @@ export default async function InventoryPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
   // El manager solo opera su hotel: un id ajeno redirige al propio.
   const session = await getSessionScope();
   if (session.role === "MANAGER" && session.hotel_id !== id) {

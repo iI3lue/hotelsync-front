@@ -19,7 +19,7 @@ function ThemeIcon({ theme }: { theme: ThemeChoice }) {
     viewBox: "0 0 24 24",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.8,
+    strokeWidth: 1.3,
     strokeLinecap: "round",
     "aria-hidden": true,
   } as const;
@@ -58,7 +58,7 @@ export default function ThemeToggle() {
   }, []);
 
   const btnCls =
-    "flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition-all duration-150 hover:bg-brand-navy/8 hover:text-brand-navy active:scale-95 dark:text-gray-400 dark:hover:bg-white/8 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold";
+    "flex h-10 w-10 items-center justify-center rounded-full text-current opacity-75 transition-opacity duration-200 hover:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-current";
 
   if (!mounted) {
     return <span className={btnCls} aria-hidden="true"><span className="h-4 w-4" /></span>;

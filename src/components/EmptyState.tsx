@@ -5,6 +5,7 @@ interface EmptyStateProps {
   description: string;
   actionHref?: string;
   actionLabel?: string;
+  children?: React.ReactNode;
 }
 
 export default function EmptyState({
@@ -12,18 +13,16 @@ export default function EmptyState({
   description,
   actionHref,
   actionLabel,
+  children,
 }: EmptyStateProps) {
   return (
-    <div className="rounded-lg bg-white px-6 py-12 text-center shadow-md dark:bg-gray-800">
-      <h2 className="mb-2 text-xl font-semibold text-balance">{title}</h2>
-      <p className="mx-auto mb-6 max-w-md break-words text-gray-600 dark:text-gray-300">
-        {description}
-      </p>
+    <div className="border-y border-brand-navy/10 px-6 py-20 text-center dark:border-white/10">
+      <span aria-hidden="true" className="mx-auto mb-8 block h-10 w-px bg-brand-gold" />
+      <h2 className="mx-auto max-w-xl font-display text-[2rem] leading-tight text-brand-navy dark:text-white">{title}</h2>
+      <p className="mx-auto mt-4 max-w-md break-words text-brand-navy/60 dark:text-white/60">{description}</p>
+      {children}
       {actionHref && actionLabel ? (
-        <Link
-          href={actionHref}
-          className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation"
-        >
+        <Link href={actionHref} className="btn-outline mt-10">
           {actionLabel}
         </Link>
       ) : null}

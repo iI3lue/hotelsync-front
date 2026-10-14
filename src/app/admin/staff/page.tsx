@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Hotel } from "@/lib/api";
+import { fetchHotels, type Hotel } from "@/lib/api";
 import { me } from "@/lib/auth-client";
 import {
-  fetchHotels,
   fetchStaff,
   createStaff,
   fetchHotelStaff,
@@ -23,7 +22,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const inputClass =
-  "rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 dark:border-white/10 dark:bg-brand-navy-800 dark:text-white dark:[color-scheme:dark]";
+  "rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 dark:border-white/10 dark:bg-brand-navy-900 dark:text-white dark:[color-scheme:dark]";
 const labelClass =
   "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-300";
 
@@ -51,7 +50,7 @@ function StaffTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-white/10 dark:bg-brand-navy-800">
+    <div className="overflow-x-auto rounded-2xl border border-gray-200/80 bg-white shadow-xs dark:border-white/10 dark:bg-brand-navy-800">
       <table className="w-full">
         <thead className="border-b border-gray-200 bg-gray-50/80 dark:border-white/10 dark:bg-white/5">
           <tr>
@@ -280,26 +279,32 @@ export default function StaffPage() {
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
-          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-navy px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-navy-700 active:scale-95 dark:bg-brand-gold dark:text-brand-navy dark:hover:bg-brand-gold-400"
+          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand-navy px-4 text-sm font-semibold text-white shadow-xs transition-all hover:bg-brand-navy-900 active:scale-95 dark:bg-brand-gold dark:text-brand-navy dark:hover:bg-brand-gold-dark"
         >
           {showForm ? "Cerrar" : "+ Nueva cuenta"}
         </button>
       </div>
 
       {notice && (
-        <div role="status" className="rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+        <div role="status" className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 text-sm text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200">
+          <svg className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className="font-medium">{notice}</p>
         </div>
       )}
 
       {error && (
-        <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
+          <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
           <p className="font-medium">{error}</p>
         </div>
       )}
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="rounded-lg bg-white p-6 shadow dark:bg-gray-800 space-y-4">
+        <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-xs dark:border-white/10 dark:bg-brand-navy-800 space-y-4">
           <h2 className="font-display text-lg font-semibold text-brand-navy dark:text-white">Nueva cuenta de personal</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
@@ -317,6 +322,7 @@ export default function StaffPage() {
                 value={formData.role}
                 onChange={(e) => setFormData((p) => ({ ...p, role: e.target.value }))}
                 className={`${inputClass} w-full`}
+                style={{ colorScheme: "dark" }}
               >
                 {(isManager ? MANAGER_ROLES : ROLES).map((role) => (
                   <option key={role} value={role}>{ROLE_LABELS[role]}</option>
@@ -326,7 +332,7 @@ export default function StaffPage() {
             <div>
               <label htmlFor="staff-hotel" className={labelClass}>Hotel asignado</label>
               {isManager ? (
-                <p className="flex h-10 w-full items-center rounded-xl border border-gray-200 bg-brand-cream-700 px-3 text-sm font-medium text-brand-navy dark:border-white/10 dark:bg-brand-navy-800 dark:text-gray-50">
+                <p className="flex h-10 w-full items-center rounded-xl border border-gray-200 bg-brand-cream-700 px-3 text-sm font-medium text-brand-navy dark:border-white/10 dark:bg-brand-navy dark:text-gray-50">
                   {hotels[0]?.name ?? "Mi hotel asignado"}
                 </p>
               ) : (
@@ -336,6 +342,7 @@ export default function StaffPage() {
                   onChange={(e) => setFormData((p) => ({ ...p, hotel_id: e.target.value }))}
                   className={`${inputClass} w-full`}
                   required
+                  style={{ colorScheme: "dark" }}
                 >
                   {hotels.map((h) => (
                     <option key={h.hotel_id} value={h.hotel_id}>{h.name}</option>
@@ -349,7 +356,7 @@ export default function StaffPage() {
             </div>
           </div>
           <div className="flex items-center gap-3 pt-2">
-            <button type="submit" disabled={busy} className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-navy px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-navy-700 active:scale-95 disabled:opacity-50 dark:bg-brand-gold dark:text-brand-navy dark:hover:bg-brand-gold-400">
+            <button type="submit" disabled={busy} className="inline-flex h-10 items-center justify-center rounded-xl bg-brand-navy px-5 text-sm font-semibold text-white shadow-xs transition-all hover:bg-brand-navy-900 active:scale-95 disabled:opacity-50 dark:bg-brand-gold dark:text-brand-navy dark:hover:bg-brand-gold-dark">
               {busy ? "Creando…" : "Crear cuenta"}
             </button>
             <button type="button" onClick={() => setShowForm(false)} className="inline-flex h-10 items-center justify-center rounded-xl border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-100 dark:border-white/10 dark:text-gray-200 dark:hover:bg-white/5">
@@ -360,11 +367,15 @@ export default function StaffPage() {
       )}
 
       {isManager && !myHotelId && !loading ? (
-        <div role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
+          <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
           <p className="font-medium">Tu cuenta de manager no tiene un hotel asignado. No podés gestionar personal hasta que se corrija tu asignación.</p>
         </div>
       ) : loading ? (
-        <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+        <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-brand-navy-800">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-gold border-t-transparent" />
           <p className="text-sm text-gray-500 dark:text-gray-400">Cargando personal…</p>
         </div>
       ) : (

@@ -15,17 +15,17 @@ export default function ViewingAsBanner({ viewAs, onExit }: ViewingAsBannerProps
   return (
     <div
       role="status"
-      className="border-b border-brand-gold/30 bg-brand-gold/10 dark:bg-brand-gold/15"
+      className="border-b border-brand-gold/30 bg-[#EFE9DC] dark:bg-brand-navy-800"
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-1.5">
-        <p className="text-xs font-semibold text-brand-navy dark:text-brand-gold">
+      <div className="shell flex items-center justify-between gap-3 py-1.5">
+        <p className="text-xs text-brand-navy dark:text-brand-gold-300">
           Viendo como {VIEW_AS_LABELS[viewAs]} — solo cambia lo que ves,
           tus permisos reales no cambian.
         </p>
         <button
           type="button"
           onClick={onExit}
-          className="shrink-0 rounded-lg border border-brand-gold/40 px-2.5 py-1 text-xs font-bold text-brand-navy transition-colors hover:bg-brand-gold/20 dark:text-brand-gold"
+          className="shrink-0 rounded-[2px] border border-brand-gold/50 px-2.5 py-1 text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-brand-navy transition-colors hover:bg-brand-gold/20 dark:text-brand-gold"
         >
           Volver a Super Admin
         </button>

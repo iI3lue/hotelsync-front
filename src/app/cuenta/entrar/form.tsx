@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import GoogleButton from "@/components/GoogleButton";
 import { login, me } from "@/lib/auth-client";
-
 import { defaultRouteForRole, isAllowedPathForRole } from "@/lib/routes";
+import AuthPanel from "@/components/ui/AuthPanel";
 
 function safeReturnTo(value: string | undefined): string {
   if (value && value.startsWith("/") && !value.startsWith("//")) return value;
@@ -28,65 +28,11 @@ function postLoginDest(profile: { role: string }, returnTo: string): string {
 
 /* ─── Left panel (ambient) ─────────────────────────────────── */
 function AuthAmbient({ mode }: { mode: "login" | "register" }) {
-  const quotes = [
-    { text: "El lujo es el arte de no necesitar nada más.", author: "Coco Chanel" },
-    { text: "Viajar es la única cosa que comprás que te hace más rico.", author: "Anónimo" },
-    { text: "No existen países extraños; solo somos extranjeros nosotros.", author: "R. L. Stevenson" },
-  ];
-  const q = quotes[mode === "login" ? 0 : 1];
-
   return (
-    <div className="relative flex h-full flex-col justify-between overflow-hidden bg-hero-gradient p-10">
-      {/* Orb decorations */}
-      <div aria-hidden="true" className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-brand-gold/8 blur-3xl" />
-      <div aria-hidden="true" className="absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
-
-      {/* Logo */}
-      <div className="relative">
-        <a href="/" className="font-display text-2xl font-semibold text-white">
-          Hotel<span className="text-brand-gold">Sync</span>
-        </a>
-      </div>
-
-      {/* Center content */}
-      <div className="relative space-y-6">
-        {/* Decorative mini hotel card */}
-        <div className="w-72 rounded-2xl border border-white/10 bg-white/8 p-5 backdrop-blur-sm">
-          <div className="mb-3 h-28 w-full rounded-xl bg-gradient-to-br from-brand-gold/20 to-blue-800/40" />
-          <div className="space-y-2">
-            <div className="h-3 w-3/4 rounded-full bg-white/20" />
-            <div className="h-2.5 w-1/2 rounded-full bg-white/12" />
-            <div className="mt-3 flex items-center justify-between">
-              <div className="h-2.5 w-16 rounded-full bg-brand-gold/40" />
-              <div className="h-7 w-20 rounded-lg bg-brand-gold/30" />
-            </div>
-          </div>
-        </div>
-
-        <blockquote>
-          <p className="text-lg font-medium leading-snug text-white/90">
-            &ldquo;{q.text}&rdquo;
-          </p>
-          <footer className="mt-2 text-sm text-blue-200/60">— {q.author}</footer>
-        </blockquote>
-      </div>
-
-      {/* Bottom features */}
-      <div className="relative space-y-3">
-        {[
-          "Confirmación de reserva instantánea",
-          "Control de disponibilidad en tiempo real",
-          "Historial completo de estadías",
-        ].map((f) => (
-          <div key={f} className="flex items-center gap-2.5 text-sm text-blue-100/70">
-            <svg className="h-4 w-4 shrink-0 text-brand-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {f}
-          </div>
-        ))}
-      </div>
-    </div>
+    <AuthPanel
+      title="Bienvenido de vuelta."
+      points={["Tus reservas en un solo lugar", "Disponibilidad real, sin sobreventa", "Gestioná tu estancia cuando quieras"]}
+    />
   );
 }
 
@@ -243,6 +189,14 @@ export default function EnterForm({
                   >
                     {showPassword ? "Ocultar" : "Mostrar"}
                   </button>
+                </div>
+                <div className="mt-2 text-right">
+                  <a
+                    href="/cuenta/recuperar"
+                    className="text-xs font-semibold text-brand-gold hover:underline"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </a>
                 </div>
               </div>
 

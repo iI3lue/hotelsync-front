@@ -3,15 +3,27 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   assignCleaningTask,
+  fetchHotels,
   fetchHotelTasks,
   fetchMyTasks,
   transitionCleaningTask,
   type CleaningTask,
 } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
+import type { Hotel } from "@/lib/api";
 
-const inputClass =
-  "rounded border border-gray-300 bg-white px-3 py-2 text-sm touch-manipulation dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100";
+function statusBadge(status: string) {
+  switch (status) {
+    case "pending":
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20";
+    case "assigned":
+      return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
+    case "done":
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20";
+    default:
+      return "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20";
+  }
+}
 
 function TaskRow({
   task,
@@ -26,66 +38,84 @@ function TaskRow({
   const loading = busy === task.history_id;
 
   return (
-    <li className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 break-words">
-        <span className="font-medium">Hab. {task.room_number}</span>
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-semibold dark:bg-gray-700">
-          {task.status}
-        </span>
-        <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
-          {task.booking_id.slice(0, 8)}…
-        </span>
-      </div>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {task.status !== "done" && task.status !== "cancelled" ? (
-          <>
-            {task.status === "assigned" ? (
+    <li className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs transition-all hover:border-brand-gold/40 hover:shadow-card dark:border-white/10 dark:bg-brand-navy-800">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-display text-base font-bold text-brand-navy dark:text-white">
+              Habitación {task.room_number}
+            </span>
+            <span
+              className={`rounded-md px-2 py-0.5 text-xs font-bold uppercase tracking-wider border ${statusBadge(
+                task.status
+              )}`}
+            >
+              {task.status}
+            </span>
+            <span className="font-mono text-xs text-gray-400">
+              Reserva: {task.booking_id.slice(0, 8)}…
+            </span>
+          </div>
+
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {task.assigned_to
+              ? `Asignada a: ${task.assigned_to.slice(0, 12)}…`
+              : "Sin camarista asignado aún"}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
+          {task.status !== "done" && task.status !== "cancelled" ? (
+            <>
+              {task.status === "assigned" ? (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => onAction(task, "start")}
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-gray-300 px-3.5 text-xs font-semibold text-gray-700 transition-all hover:bg-gray-100 active:scale-95 disabled:opacity-50 dark:border-white/10 dark:text-gray-200 dark:hover:bg-white/5"
+                >
+                  {loading ? "Procesando…" : "Empezar limpieza"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 disabled={loading}
-                onClick={() => onAction(task, "start")}
-                className="rounded border border-gray-300 px-3 py-2 text-sm font-medium transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 touch-manipulation dark:border-gray-600 dark:hover:bg-gray-700 disabled:opacity-50"
+                onClick={() => onAction(task, "complete")}
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-emerald-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-emerald-700 active:scale-95 disabled:opacity-50"
               >
-                {loading ? "Procesando…" : "Empezar"}
+                {loading ? "Procesando…" : "Completar"}
               </button>
-            ) : null}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => onAction(task, "complete")}
-              className="rounded bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 touch-manipulation disabled:opacity-50"
-            >
-              {loading ? "Procesando…" : "Completar"}
-            </button>
-          </>
-        ) : null}
-        {task.status === "pending" ? (
-          <span className="flex flex-wrap items-center gap-2">
-            <label htmlFor={`assign-${task.history_id}`} className="sr-only">
-              UUID del personal
-            </label>
-            <input
-              id={`assign-${task.history_id}`}
-              type="text"
-              placeholder="UUID personal"
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-              className={`${inputClass} w-40 font-mono text-xs`}
-            />
-            <button
-              type="button"
-              disabled={loading || !assignee.trim()}
-              onClick={() => {
-                (task as CleaningTask & { draftAssignee?: string }).draftAssignee =
-                  assignee.trim();
-                onAction(task, "assign");
-              }}
-              className="rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 touch-manipulation disabled:opacity-50"
-            >
-              Asignar
-            </button>
-          </span>
-        ) : null}
+            </>
+          ) : null}
+
+          {task.status === "pending" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor={`assign-${task.history_id}`} className="sr-only">
+                UUID del personal
+              </label>
+              <input
+                id={`assign-${task.history_id}`}
+                type="text"
+                placeholder="UUID personal"
+                value={assignee}
+                onChange={(e) => setAssignee(e.target.value)}
+                className="h-9 w-36 rounded-xl border border-gray-300 bg-gray-50/50 px-2.5 font-mono text-xs text-gray-900 transition-colors focus:border-brand-gold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold/30 dark:border-white/10 dark:bg-brand-navy-900 dark:text-white"
+              />
+              <button
+                type="button"
+                disabled={loading || !assignee.trim()}
+                onClick={() => {
+                  (task as CleaningTask & { draftAssignee?: string }).draftAssignee =
+                    assignee.trim();
+                  onAction(task, "assign");
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-xl bg-brand-navy px-3.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-brand-navy-900 active:scale-95 disabled:opacity-50 dark:bg-brand-gold dark:text-brand-navy dark:hover:bg-brand-gold-dark"
+              >
+                Asignar
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </li>
   );
@@ -96,32 +126,66 @@ export default function HousekeepingBoard({
 }: {
   params: Promise<{ hotel_id?: string }>;
 }) {
+  const [hotels, setHotels] = useState<Hotel[]>([]);
   const [hotelId, setHotelId] = useState("");
+  const [myRole, setMyRole] = useState<string | null>(null);
   const [mine, setMine] = useState<CleaningTask[] | null>(null);
   const [hotel, setHotel] = useState<CleaningTask[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [noAssignment, setNoAssignment] = useState(false);
+
+  const isHousekeeper = myRole === "HOUSEKEEPER";
 
   useEffect(() => {
-    void params.then((p) => {
-      void me().then((profile) => {
-        // El personal de limpieza solo opera su hotel asignado: se ignora
-        // un ?hotel_id= manipulado. El backend (requireHotelRole) lo
-        // revalida con 403 ante cualquier intento sobre otro hotel.
-        if (profile?.role === "HOUSEKEEPER") {
-          setNoAssignment(!profile.hotel_id);
-          setHotelId(profile.hotel_id ?? "");
+    let cancelled = false;
+    void me().then((profile) => {
+      if (cancelled) return;
+      const role = profile?.role ?? null;
+      setMyRole(role);
+      if (role === "HOUSEKEEPER") {
+        // El housekeeper solo opera su hotel asignado: no se expone el
+        // catálogo completo y se ignora cualquier ?hotel_id= manipulado
+        // (el backend lo revalida con 403).
+        if (!profile?.hotel_id) {
+          setHotels([]);
           return;
         }
-        if (p.hotel_id) {
-          setHotelId(p.hotel_id);
-          return;
-        }
-        setHotelId(profile?.hotel_id ?? "");
-      });
+        setHotelId(profile.hotel_id);
+        fetchHotels()
+          .then((list) => {
+            if (cancelled) return;
+            const mine = list.find((h) => h.hotel_id === profile.hotel_id);
+            setHotels(mine ? [mine] : []);
+          })
+          .catch(() => {
+            if (!cancelled) setHotels([]);
+          });
+        return;
+      }
+      fetchHotels()
+        .then((list) => {
+          if (cancelled) return;
+          setHotels(list);
+          setHotelId(
+            (current) => current || profile?.hotel_id || list[0]?.hotel_id || ""
+          );
+        })
+        .catch(() => {
+          if (!cancelled) setHotels([]);
+        });
     });
-  }, [params]);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Se espera al perfil: el ?hotel_id= se ignora para HOUSEKEEPER.
+    if (myRole === null || myRole === "HOUSEKEEPER") return;
+    void params.then((p) => {
+      if (p.hotel_id) setHotelId(p.hotel_id);
+    });
+  }, [params, myRole]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -165,57 +229,163 @@ export default function HousekeepingBoard({
     }
   };
 
+  const selectedHotel = hotels.find((h) => h.hotel_id === hotelId);
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8">
-      <h1 className="mb-2 text-3xl font-bold">Limpieza</h1>
-      <p className="mb-6 text-sm text-gray-600 dark:text-gray-300">
-        {hotelId
-          ? `Hotel ${hotelId.slice(0, 8)}… · tus tareas y la cola del hotel.`
-          : "Elegí un hotel con ?hotel_id= para ver su cola."}{" "}
-        Requiere sesión de limpieza o manager.
-      </p>
+    <div className="mx-auto w-full max-w-7xl px-4 py-4 space-y-8">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-brand-navy dark:text-white sm:text-3xl">
+              Panel de Limpieza
+            </h1>
+            <span className="rounded-full bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-gold">
+              Housekeeping
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {selectedHotel
+              ? `Operando en ${selectedHotel.name}`
+              : "Gestión de habitaciones y estado de limpieza"}
+          </p>
+        </div>
+
+        {/* Hotel selector (solo manager/super admin; el housekeeper ve su hotel fijo) */}
+        {!isHousekeeper && hotels.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label htmlFor="housekeeping-hotel-select" className="sr-only">
+              Cambiar hotel
+            </label>
+            <select
+              id="housekeeping-hotel-select"
+              value={hotelId}
+              onChange={(e) => setHotelId(e.target.value)}
+              className="h-10 rounded-xl border border-gray-300 bg-white px-3 text-sm font-medium text-gray-900 transition-colors focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30 dark:border-white/10 dark:bg-brand-navy-800 dark:text-white"
+            >
+              {hotels.map((h) => (
+                <option key={h.hotel_id} value={h.hotel_id}>
+                  {h.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => void load()}
+              title="Recargar tareas"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 active:scale-95 dark:border-white/10 dark:bg-brand-navy-800 dark:text-gray-300"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+        )}
+        {isHousekeeper && hotelId && (
+          <div className="flex items-center gap-2">
+            <p className="flex h-10 items-center rounded-xl border border-gray-200 bg-brand-cream-700 px-3 text-sm font-medium text-brand-navy dark:border-white/10 dark:bg-brand-navy dark:text-gray-50">
+              {hotels[0]?.name ?? "Mi hotel asignado"}
+            </p>
+            <button
+              type="button"
+              onClick={() => void load()}
+              title="Recargar tareas"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 active:scale-95 dark:border-white/10 dark:bg-brand-navy-800 dark:text-gray-300"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {isHousekeeper && !hotelId ? (
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
+          <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="font-medium">
+            Tu cuenta no tiene un hotel asignado. Pedile a tu manager que revise tu
+            asignación antes de operar limpieza.
+          </p>
+        </div>
+      ) : null}
 
       {error ? (
-        <p role="alert" className="mb-4 rounded bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200">
-          {error}
-        </p>
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50/90 p-4 text-sm text-red-800 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
+          <svg className="h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <p className="font-medium">{error}</p>
+        </div>
       ) : null}
 
-      {noAssignment ? (
-        <p role="alert" className="mb-4 rounded bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-          Tu usuario no tiene hotel asignado. Pedile a tu manager que te asigne uno.
-        </p>
-      ) : null}
+      {/* Mis tareas */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-lg font-semibold text-brand-navy dark:text-white">
+              Mis tareas asignadas
+            </h2>
+            {mine && (
+              <span className="rounded-full bg-brand-gold/15 px-2 py-0.5 text-xs font-bold text-brand-gold">
+                {mine.length}
+              </span>
+            )}
+          </div>
+        </div>
 
-      <h2 className="mb-3 text-xl font-semibold">Mis tareas</h2>
-      {!mine ? (
-        <p role="status" className="text-gray-500 dark:text-gray-400">Cargando…</p>
-      ) : mine.length === 0 ? (
-        <p className="mb-6 rounded-lg bg-white p-4 text-sm text-gray-500 shadow dark:bg-gray-800 dark:text-gray-400">
-          No tenés tareas asignadas.
-        </p>
-      ) : (
-        <ul className="mb-8 space-y-4">
-          {mine.map((t) => (
-            <TaskRow key={t.history_id} task={t} onAction={handleAction} busy={busy} />
-          ))}
-        </ul>
-      )}
+        {!mine ? (
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-brand-navy-800">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-gold border-t-transparent" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">Cargando mis tareas…</p>
+          </div>
+        ) : mine.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-white/50 p-6 text-center text-sm text-gray-500 backdrop-blur-sm dark:border-white/10 dark:bg-brand-navy-800/40 dark:text-gray-400">
+            No tenés tareas personales asignadas en este momento.
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {mine.map((t) => (
+              <TaskRow key={t.history_id} task={t} onAction={handleAction} busy={busy} />
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <h2 className="mb-3 text-xl font-semibold">Cola del hotel</h2>
-      {!hotel ? (
-        <p role="status" className="text-gray-500 dark:text-gray-400">Cargando…</p>
-      ) : hotel.length === 0 ? (
-        <p className="rounded-lg bg-white p-4 text-sm text-gray-500 shadow dark:bg-gray-800 dark:text-gray-400">
-          Sin tareas para este hotel.
-        </p>
-      ) : (
-        <ul className="space-y-4">
-          {hotel.map((t) => (
-            <TaskRow key={t.history_id} task={t} onAction={handleAction} busy={busy} />
-          ))}
-        </ul>
-      )}
+      {/* Cola del hotel */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-lg font-semibold text-brand-navy dark:text-white">
+              Cola de limpieza del hotel
+            </h2>
+            {hotel && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-600 dark:bg-white/10 dark:text-gray-300">
+                {hotel.length}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!hotel ? (
+          <div className="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-brand-navy-800">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-gold border-t-transparent" />
+            <p className="text-sm text-gray-500 dark:text-gray-400">Cargando cola del hotel…</p>
+          </div>
+        ) : hotel.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-white/50 p-6 text-center text-sm text-gray-500 backdrop-blur-sm dark:border-white/10 dark:bg-brand-navy-800/40 dark:text-gray-400">
+            Todas las habitaciones de este hotel se encuentran al día.
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {hotel.map((t) => (
+              <TaskRow key={t.history_id} task={t} onAction={handleAction} busy={busy} />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

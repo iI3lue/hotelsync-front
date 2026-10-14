@@ -36,15 +36,29 @@ export default function AvailabilityCalendar({
   const [month, setMonth] = useState<Date>(
     () => selectedDate ?? new Date(today.getFullYear(), today.getMonth(), 1, 12)
   );
-  // Stock con caché compartida entre calendarios, concurrencia acotada
-  // y cancelación al navegar rápido (ver lib/use-availability).
   const { stock, loading: loadingMonth } = useMonthAvailability(
     roomTypeId,
     month.getFullYear(),
     month.getMonth()
   );
 
-  // Precarga el mes siguiente en background cuando hay banda libre.
+  // Autoselect: si hay roomTypeId y la disponibilidad ya cargó y no hay fecha
+  // seleccionada, elegir automáticamente el primer día disponible del mes actual.
+  useEffect(() => {
+    if (!roomTypeId || selected || loadingMonth) return;
+    const entries = Object.entries(stock).sort(([a], [b]) => (a < b ? -1 : 1));
+    for (const [iso, count] of entries) {
+      const d = fromIsoDate(iso);
+      if (!d || d < min) continue;
+      if (count > 0) {
+        onSelect(iso);
+        break;
+      }
+    }
+    // Only run when stock or roomTypeId changes, not on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stock, roomTypeId]);
+
   useEffect(() => {
     if (!roomTypeId) return;
     const next = new Date(month.getFullYear(), month.getMonth() + 1, 1, 12);
@@ -65,7 +79,7 @@ export default function AvailabilityCalendar({
   }, [stock, roomTypeId, min]);
 
   return (
-    <div id={id}>
+    <div id={id} className="flex flex-col items-center">
       <DayPicker
         mode="single"
         locale={es}
@@ -82,18 +96,26 @@ export default function AvailabilityCalendar({
         captionLayout="dropdown"
         startMonth={new Date(today.getFullYear(), today.getMonth(), 1)}
         endMonth={new Date(today.getFullYear() + 1, today.getMonth(), 1)}
+        classNames={{
+          root: "rdp-root rdp-custom",
+        }}
       />
       {roomTypeId ? (
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300" aria-live="polite">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-300" aria-live="polite">
           <span className="inline-flex items-center gap-1">
-            <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full bg-green-500" />
+            <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full bg-[#2F6B4F]" />
             Con disponibilidad
           </span>
           <span className="inline-flex items-center gap-1">
             <span aria-hidden="true" className="inline-block h-3 w-3 rounded-full bg-gray-300 dark:bg-gray-600" />
             Sin disponibilidad
           </span>
-          {loadingMonth ? <span>Cargando mes…</span> : null}
+          {loadingMonth ? (
+            <span className="inline-flex items-center gap-1 text-gray-400">
+              <span className="h-3 w-3 animate-spin rounded-full border border-gray-400 border-t-transparent" />
+              Cargando…
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import EnterForm from "./form";
 
 export const metadata: Metadata = {
-  title: "Entrar — HotelSync",
+  title: "Entrar",
   description: "Accedé a tu cuenta de huésped o creá una nueva.",
 };
 

@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { defaultRouteForRole, isAllowedPathForRole } from "@/lib/routes";
+
+export { defaultRouteForRole, isAllowedPathForRole };
 
 /** Roles simulables en el selector "Ver como…". */
 export const VIEW_AS_ROLES = [

@@ -1,102 +1,90 @@
-import { Suspense } from "react";
-import { fetchHotels, filterHotels } from "@/lib/api";
+import Link from "next/link";
+import { fetchHotels, filterHotels, type Hotel } from "@/lib/api";
+import { destinationsFrom } from "@/lib/destinations";
+import { SCENES } from "@/lib/imagery";
 import EmptyState from "@/components/EmptyState";
 import HotelCard from "@/components/HotelCard";
 import SearchBar from "@/components/SearchBar";
-import { SkeletonGrid } from "@/components/SkeletonCard";
+import ParallaxImage from "@/components/ui/ParallaxImage";
+import Photo from "@/components/ui/Photo";
+import Arrow from "@/components/ui/Arrow";
+import DestinationIndex from "@/components/home/DestinationIndex";
 
-async function HotelGrid({ city }: { city?: string }) {
-  let hotels: Awaited<ReturnType<typeof fetchHotels>> = [];
-  try {
-    hotels = await fetchHotels();
-  } catch {
-    return (
-      <EmptyState
-        title="No pudimos cargar los hoteles"
-        description="El servicio de catálogo no responde. Verificá que el backend esté corriendo e intentá de nuevo."
-      />
-    );
-  }
-
+/* ─── Colección: dos columnas escalonadas ─────────────────────── */
+function Collection({ hotels, city }: { hotels: Hotel[]; city?: string }) {
   const filtered = filterHotels(hotels, { city });
   if (filtered.length === 0) {
     return (
       <EmptyState
-        title="No hay hoteles disponibles por el momento"
+        title={city ? `Todavía no estamos en ${city}` : "La colección se está preparando"}
         description={
           city
-            ? `No encontramos hoteles para "${city}". Probá con otra ciudad o limpiá la búsqueda.`
-            : "Todavía no hay hoteles cargados. Volvé a intentarlo más tarde."
+            ? "Probá con otra ciudad o mirá todos los destinos donde ya te esperamos."
+            : "En breve vas a ver acá nuestros hoteles. Volvé a intentarlo en unos minutos."
         }
         actionHref="/buscar"
-        actionLabel="Buscar con filtros"
+        actionLabel="Ver todos los destinos"
       />
     );
   }
 
+  if (filtered.length < 3) {
+    return (
+      <div className="grid grid-cols-1 gap-x-12 gap-y-20 md:grid-cols-2">
+        {filtered.map((h, i) => <HotelCard key={h.hotel_id} hotel={h} index={i} />)}
+      </div>
+    );
+  }
+
+  // Dos columnas con la segunda desplazada (ritmo editorial); en móvil
+  // conserva el orden original del catálogo.
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {filtered.map((hotel, i) => (
-        <div
-          key={hotel.hotel_id}
-          className={`animate-slide-up-${Math.min(i + 1, 6) as 1 | 2 | 3 | 4 | 5 | 6}`}
-        >
-          <HotelCard hotel={hotel} />
+    <div className="grid grid-cols-1 gap-x-16 gap-y-20 md:grid-cols-2 md:gap-y-28 md:pb-40 lg:gap-x-24 md:[&>*:nth-child(even)]:translate-y-40">
+      {filtered.map((h, i) => (
+        <div key={h.hotel_id}>
+          <HotelCard hotel={h} index={i} />
         </div>
       ))}
     </div>
   );
 }
 
-/* ─── Features strip ─────────────────────────────────────────── */
-function FeaturesStrip() {
-  const features = [
-    {
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-        </svg>
-      ),
-      title: "Reserva segura",
-      desc: "Confirmación instantánea y control de inventario en tiempo real sin sobreventa.",
-    },
-    {
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-        </svg>
-      ),
-      title: "Fechas flexibles",
-      desc: "Visualizá disponibilidad en tiempo real con calendario interactivo y elegí tu mejor opción.",
-    },
-    {
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-        </svg>
-      ),
-      title: "Sin sorpresas",
-      desc: "Precio final transparente antes de confirmar. Tarifas directas y políticas claras.",
-    },
-  ];
+/* ─── Pilares de la casa ──────────────────────────────────────── */
+const PILLARS = [
+  {
+    eyebrow: "Mesa",
+    title: "Cocina de la región",
+    body: "Desayunos largos, producto de mercado y una carta que cambia con la temporada de cada ciudad.",
+    image: SCENES.dining,
+  },
+  {
+    eyebrow: "Descanso",
+    title: "Tiempo para vos",
+    body: "Spa, piscina o simplemente una buena cama: habitaciones pensadas para dormir de verdad.",
+    image: SCENES.wellness,
+  },
+  {
+    eyebrow: "Encuentro",
+    title: "Lugares para reunirse",
+    body: "Del brindis íntimo al evento de empresa, con un equipo que se ocupa de los detalles.",
+    image: SCENES.gatherings,
+  },
+];
 
-  return (
-    <div className="mx-auto grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-3">
-      {features.map((f, i) => (
-        <div
-          key={f.title}
-          className={`animate-slide-up-${(i + 1) as 1 | 2 | 3} rounded-2xl border border-brand-navy/6 bg-white p-6 shadow-card transition-all duration-300 hover:shadow-card-hover hover:-translate-y-0.5 dark:border-white/6 dark:bg-brand-navy-800`}
-        >
-          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gold/15 text-brand-gold">
-            {f.icon}
-          </div>
-          <h3 className="mb-1 font-semibold text-brand-navy dark:text-white">{f.title}</h3>
-          <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">{f.desc}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+const DIRECT = [
+  {
+    title: "Tarifa oficial",
+    body: "Reservás con la casa, sin intermediarios. El precio que ves es el que pagás.",
+  },
+  {
+    title: "Confirmación inmediata",
+    body: "La disponibilidad se consulta en tiempo real: si la ves libre, es tuya.",
+  },
+  {
+    title: "Políticas a la vista",
+    body: "Cancelación y condiciones de cada hotel claras antes de confirmar, no después.",
+  },
+];
 
 /* ─── Page ───────────────────────────────────────────────────── */
 export default async function HomePage({
@@ -105,88 +93,191 @@ export default async function HomePage({
   searchParams: Promise<{ city?: string }>;
 }) {
   const { city } = await searchParams;
+  let hotels: Hotel[] = [];
+  let failed = false;
+  try {
+    hotels = await fetchHotels();
+  } catch {
+    failed = true;
+  }
+
+  const destinations = destinationsFrom(hotels);
+  const countries = Array.from(new Set(hotels.map((h) => h.country)));
+  const roomTypes = hotels.reduce((n, h) => n + (h.roomTypes?.length ?? 0), 0);
+
+  const stats = [
+    { value: hotels.length, label: hotels.length === 1 ? "Hotel" : "Hoteles" },
+    { value: destinations.length, label: destinations.length === 1 ? "Destino" : "Destinos" },
+    { value: countries.length, label: countries.length === 1 ? "País" : "Países" },
+    { value: roomTypes, label: "Tipos de habitación" },
+  ].filter((s) => s.value > 0);
 
   return (
-    <div className="space-y-12">
-      {/* ── 1. Hero con barra de búsqueda ── */}
-      <section
-        aria-labelledby="hero-title"
-        className="relative bg-hero-gradient"
-      >
-        {/* Orbes decorativos contenidos en un wrapper interno: el overflow
-            va acá y NO en la sección, para no recortar los desplegables
-            del SearchBar (destino, fechas, huéspedes). */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-        >
-          <div className="absolute -top-40 right-0 h-[600px] w-[600px] rounded-full bg-brand-gold/6 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-blue-600/10 blur-3xl" />
-        </div>
+    <div>
+      {/* ── 1. Hero inmersivo ── */}
+      <section aria-labelledby="hero-title" className="relative isolate flex h-[92svh] min-h-[620px] items-end overflow-hidden bg-brand-navy-950 text-white">
+        <ParallaxImage src={SCENES.hero} alt="Piscina al atardecer en uno de nuestros hoteles" priority strength={160} />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/30" />
+        {/* Cortina de entrada */}
+        <div aria-hidden="true" className="absolute inset-0 z-10 origin-top animate-curtain-up bg-brand-navy-950" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-16 pt-16 sm:pb-20 sm:pt-24">
-          {/* Eyebrow */}
-          <div className="animate-slide-up mb-4 inline-flex items-center gap-2 rounded-full border border-brand-gold/20 bg-brand-gold/10 px-4 py-1.5">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-gold" />
-            <span className="text-xs font-semibold tracking-wider text-brand-gold uppercase">
-              Plataforma hotelera premium
+        <div className="shell relative z-20 pb-28 md:pb-36">
+          <p className="mask-line text-eyebrow uppercase text-white/80">
+            <span style={{ ["--d" as string]: "700ms" }}>
+              {countries.length > 0 ? countries.join(" · ") : "Hoteles de autor"}
             </span>
-          </div>
-
-          <h1
-            id="hero-title"
-            className="animate-slide-up-1 max-w-3xl font-display text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl"
-          >
-            Encontrá tu{" "}
-            <span className="gradient-text">estadía perfecta</span>
-          </h1>
-
-          <p className="animate-slide-up-2 mt-4 max-w-xl text-base leading-relaxed text-blue-100/80 sm:text-lg">
-            Buscá por destino, elegí fechas y compará hoteles de toda la cadena
-            en un solo lugar. Reserva confirmada en segundos.
           </p>
-
-          <div className="animate-slide-up-3 mt-8">
-            <SearchBar initialCity={city ?? ""} heroMode />
+          <h1 id="hero-title" className="mt-6 font-display text-display-lg">
+            <span className="mask-line"><span style={{ ["--d" as string]: "800ms" }}>Hoteles con</span></span>
+            <span className="mask-line"><span style={{ ["--d" as string]: "920ms" }}>sentido de lugar.</span></span>
+          </h1>
+          <div className="mt-8 grid items-end gap-8 md:grid-cols-[minmax(0,30rem)_1fr]">
+            <p className="animate-slide-up text-[1.05rem] leading-relaxed text-white/80" style={{ animationDelay: "1150ms" }}>
+              Cada casa tiene el carácter de su ciudad: cocina local, habitaciones para descansar de verdad
+              y un equipo que conoce el barrio. Qué bueno que estés acá.
+            </p>
+            <div className="hidden items-center justify-end gap-4 md:flex">
+              <span className="text-eyebrow uppercase text-white/60">Desplazate</span>
+              <span className="relative block h-14 w-px overflow-hidden bg-white/20">
+                <span className="absolute inset-0 animate-scroll-cue bg-white" />
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── 2. Nuestros Hoteles: seguido inmediatamente de la barra de búsqueda ── */}
-      <section aria-labelledby="listing-title" className="mx-auto max-w-7xl px-4 pt-4 pb-8">
-        <div className="mb-8 flex items-center justify-between gap-4">
+      {/* Barra de reserva anclada al pie del hero */}
+      <div className="shell relative z-30 -mt-14 animate-slide-up md:-mt-[46px]" style={{ animationDelay: "1250ms" }}>
+        <SearchBar initialCity={city ?? ""} heroMode />
+      </div>
+
+      {/* ── 2. Introducción ── */}
+      <section aria-labelledby="intro-title" className="shell pb-8 pt-28 md:pt-40">
+        <div className="grid gap-10 lg:grid-cols-[14rem_1fr]">
+          <p className="eyebrow" data-reveal="fade">La casa</p>
           <div>
-            <h2 id="listing-title" className="section-title">
+            <h2 id="intro-title" data-reveal="" className="max-w-4xl font-display text-[clamp(1.75rem,3.4vw,2.9rem)] leading-[1.2] text-brand-navy dark:text-white">
+              Somos una colección pequeña de hoteles. Nos gusta la arquitectura que respeta su ciudad,
+              los desayunos sin apuro y las reservas sin vueltas.
+            </h2>
+            {stats.length > 0 && (
+              <dl className="mt-16 grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-4">
+                {stats.map((s, i) => (
+                  <div key={s.label} data-reveal="" style={{ ["--reveal-delay" as string]: `${i * 80}ms` }} className="flex flex-col">
+                    <span data-reveal="line" className="order-0 block h-px bg-brand-navy/20 dark:bg-white/20" />
+                    <dt className="order-2 mt-3 eyebrow">{s.label}</dt>
+                    <dd className="order-1 mt-5 font-display text-[3.25rem] leading-none tabular-nums text-brand-navy dark:text-white">{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 3. Colección ── */}
+      <section id="hoteles" aria-labelledby="listing-title" className="shell scroll-mt-24 pt-24 md:pt-36">
+        <div className="mb-16 flex flex-wrap items-end justify-between gap-6 md:mb-20">
+          <div>
+            <p className="eyebrow" data-reveal="fade">La colección</p>
+            <h2 id="listing-title" data-reveal="" className="mt-4 font-display text-display-md text-brand-navy dark:text-white">
               {city ? `Hoteles en ${city}` : "Nuestros hoteles"}
             </h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Seleccionados por calidad y experiencia del huésped
-            </p>
           </div>
-          <a
-            href="/buscar"
-            className="shrink-0 rounded-xl border border-brand-navy/10 px-4 py-2 text-sm font-medium text-brand-navy transition-colors hover:bg-brand-navy/5 dark:border-white/10 dark:text-white dark:hover:bg-white/5"
-          >
-            Ver todos →
-          </a>
+          <Link href="/buscar" className="link-line text-brand-navy dark:text-white">
+            Ver todos los hoteles <Arrow className="h-2.5 w-5" />
+          </Link>
         </div>
 
-        <Suspense fallback={<SkeletonGrid />}>
-          <HotelGrid city={city} />
-        </Suspense>
+        {failed ? (
+          <EmptyState
+            title="No pudimos cargar los hoteles"
+            description="El catálogo no responde en este momento. Probá de nuevo en unos minutos."
+            actionHref="/"
+            actionLabel="Reintentar"
+          />
+        ) : (
+          <Collection hotels={hotels} city={city} />
+        )}
       </section>
 
-      {/* ── 3. Sección de destacados al final de la página ── */}
-      <section aria-labelledby="features-title" className="mx-auto max-w-7xl px-4 pb-16">
-        <div className="mb-6 text-center">
-          <h2 id="features-title" className="font-heading text-2xl font-bold text-brand-navy dark:text-white">
-            ¿Por qué reservar con nosotros?
+      {/* ── 4. Pilares ── */}
+      <section aria-labelledby="pillars-title" className="shell pt-32 md:pt-48">
+        <div className="mb-16 grid gap-6 lg:grid-cols-[14rem_1fr]">
+          <p className="eyebrow" data-reveal="fade">Estar en HotelSync</p>
+          <h2 id="pillars-title" data-reveal="" className="max-w-2xl font-display text-display-md text-brand-navy dark:text-white">
+            Lo que encontrás en todas nuestras casas
           </h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Tranquilidad, flexibilidad y transparencia en cada estancia
-          </p>
         </div>
-        <FeaturesStrip />
+        <div className="grid gap-x-8 gap-y-16 md:grid-cols-3">
+          {PILLARS.map((p, i) => (
+            <article key={p.title} className={i === 1 ? "md:pt-24" : ""}>
+              <div data-reveal="image" style={{ ["--reveal-delay" as string]: `${i * 120}ms` }} className="relative aspect-[3/4] overflow-hidden bg-brand-stone dark:bg-brand-navy-800">
+                <Photo src={p.image} alt={p.title} className="absolute inset-0 h-full w-full object-cover" />
+              </div>
+              <div data-reveal="" style={{ ["--reveal-delay" as string]: `${i * 120 + 150}ms` }} className="pt-7">
+                <p className="eyebrow">{p.eyebrow}</p>
+                <h3 className="mt-3 font-display text-[1.75rem] leading-tight text-brand-navy dark:text-white">{p.title}</h3>
+                <p className="mt-3 max-w-sm text-[0.95rem] leading-relaxed text-brand-navy/65 dark:text-white/60">{p.body}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 5. Destinos ── */}
+      {destinations.length > 0 && (
+        <section aria-labelledby="dest-title" className="mt-32 overflow-hidden bg-brand-navy-900 py-24 text-white md:mt-48 md:py-32">
+          <div className="shell">
+            <div className="mb-16 flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <p className="text-eyebrow uppercase text-white/50" data-reveal="fade">Destinos</p>
+                <h2 id="dest-title" data-reveal="" className="mt-4 font-display text-display-md">¿A dónde vamos?</h2>
+              </div>
+              <p data-reveal="fade" className="max-w-xs text-[0.95rem] text-white/60">
+                Elegí una ciudad y te mostramos dónde quedarte, con disponibilidad real.
+              </p>
+            </div>
+            <DestinationIndex destinations={destinations} />
+          </div>
+        </section>
+      )}
+
+      {/* ── 6. Reservar directo ── */}
+      <section aria-labelledby="direct-title" className="shell pt-32 md:pt-44">
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
+          <div>
+            <p className="eyebrow" data-reveal="fade">Reservar directo</p>
+            <h2 id="direct-title" data-reveal="" className="mt-4 max-w-md font-display text-display-sm text-brand-navy dark:text-white">
+              ¿Por qué reservar con nosotros y no en otro lado?
+            </h2>
+          </div>
+          <div className="grid gap-10 sm:grid-cols-3">
+            {DIRECT.map((d, i) => (
+              <div key={d.title} data-reveal="" style={{ ["--reveal-delay" as string]: `${i * 90}ms` }}>
+                <span data-reveal="line" className="block h-px bg-brand-gold" />
+                <h3 className="mt-6 font-display text-[1.4rem] leading-tight text-brand-navy dark:text-white">{d.title}</h3>
+                <p className="mt-3 text-[0.925rem] leading-relaxed text-brand-navy/65 dark:text-white/60">{d.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 7. Cierre ── */}
+      <section aria-labelledby="cta-title" className="relative -mb-28 mt-32 overflow-hidden md:mt-44">
+        <div data-reveal="image" className="relative h-[78svh] min-h-[480px] bg-brand-navy-900">
+          <Photo src={SCENES.pool} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
+          <div className="shell relative flex h-full flex-col items-start justify-end pb-20 text-white md:pb-28">
+            <h2 id="cta-title" className="max-w-3xl font-display text-display-md">
+              Tu próxima estancia empieza con una fecha.
+            </h2>
+            <Link href="/buscar" className="btn-light mt-10">
+              Elegir fechas
+            </Link>
+          </div>
+        </div>
       </section>
     </div>
   );

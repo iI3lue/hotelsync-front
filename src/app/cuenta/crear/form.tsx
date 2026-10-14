@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import GoogleButton from "@/components/GoogleButton";
 import { me, register } from "@/lib/auth-client";
+import AuthPanel from "@/components/ui/AuthPanel";
 
 function safeReturnTo(value: string | undefined): string {
   if (value && value.startsWith("/") && !value.startsWith("//")) return value;
@@ -43,55 +44,10 @@ function PasswordStrength({ password }: { password: string }) {
 /* ─── Left panel (ambient) ─────────────────────────────────── */
 function RegisterAmbient() {
   return (
-    <div className="relative flex h-full flex-col justify-between overflow-hidden bg-hero-gradient p-10">
-      <div aria-hidden="true" className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-brand-gold/8 blur-3xl" />
-      <div aria-hidden="true" className="absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
-
-      <div className="relative">
-        <a href="/" className="font-display text-2xl font-semibold text-white">
-          Hotel<span className="text-brand-gold">Sync</span>
-        </a>
-      </div>
-
-      <div className="relative space-y-6">
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          {[
-            { value: "10K+",  label: "Huéspedes registrados" },
-            { value: "50+",   label: "Hoteles disponibles" },
-            { value: "4.8★",  label: "Satisfacción promedio" },
-            { value: "0€",    label: "Costo de registro" },
-          ].map((s) => (
-            <div key={s.label} className="rounded-xl border border-white/8 bg-white/6 p-4 backdrop-blur-sm">
-              <p className="text-xl font-bold text-brand-gold">{s.value}</p>
-              <p className="mt-0.5 text-xs text-blue-200/60">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        <blockquote>
-          <p className="text-lg font-medium leading-snug text-white/90">
-            &ldquo;Viajar es la única cosa que comprás que te hace más rico.&rdquo;
-          </p>
-          <footer className="mt-2 text-sm text-blue-200/60">— Anónimo</footer>
-        </blockquote>
-      </div>
-
-      <div className="relative space-y-3">
-        {[
-          "Historial de reservas en un solo lugar",
-          "Check-in más rápido en recepción",
-          "Acceso a tarifas exclusivas",
-        ].map((f) => (
-          <div key={f} className="flex items-center gap-2.5 text-sm text-blue-100/70">
-            <svg className="h-4 w-4 shrink-0 text-brand-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {f}
-          </div>
-        ))}
-      </div>
-    </div>
+    <AuthPanel
+      title="Tu próxima estancia empieza acá."
+      points={["Historial de reservas en un solo lugar", "Check-in más ágil en recepción", "Puntos por cada estancia completada"]}
+    />
   );
 }
 

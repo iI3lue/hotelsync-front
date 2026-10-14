@@ -6,53 +6,63 @@
 @layer base {
   :root {
     color-scheme: light;
-    --brand-navy:   #0A1628;
-    --brand-gold:   #C9A84C;
-    --brand-cream:  #F5F0E8;
-    scroll-behavior: smooth;
+    --ink: #1B1F1D;
+    --brass: #A8874F;
+    --brass-text: #7A6136;
+    --paper: #F5F4F0;
+    --stone: #E6E3DC;
+    --header-h: 76px;
+    --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .dark {
     color-scheme: dark;
+    --brass-text: #C9AD7A;
   }
 
-  *, *::before, *::after {
-    box-sizing: border-box;
-  }
+  *, *::before, *::after { box-sizing: border-box; }
 
   html {
-    font-family: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+    font-family: "Jost Variable", Jost, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Gilda Display tiene un solo peso: nunca sintetizar negritas falsas. */
+    font-synthesis-weight: none;
+    scroll-padding-top: calc(var(--header-h) + 16px);
   }
 
   body {
-    @apply bg-brand-cream-700 dark:bg-brand-navy text-brand-navy dark:text-gray-50;
+    @apply bg-brand-paper text-brand-navy dark:bg-brand-navy-900 dark:text-[#ECEAE4];
+    font-size: 16px;
+    line-height: 1.6;
   }
 
-  h1, h2, h3 {
+  h1, h2, h3, h4 {
     text-wrap: balance;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
-  ::selection {
-    background-color: var(--brand-gold);
-    color: var(--brand-navy);
-  }
+  /* Los titulares en serif van siempre en su peso natural. */
+  .font-display, .font-heading { font-weight: 400 !important; }
+
+  p { text-wrap: pretty; }
+
+  ::selection { background-color: var(--brass); color: #fff; }
 
   :focus-visible {
-    outline: 2px solid var(--brand-gold);
+    outline: 1.5px solid var(--brass);
     outline-offset: 3px;
-    border-radius: 4px;
   }
 
-  a, button, input, select {
-    touch-action: manipulation;
-  }
+  a, button, input, select { touch-action: manipulation; }
+
+  img { color: transparent; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
@@ -62,185 +72,244 @@
 /* ─── Components ────────────────────────────────────────────── */
 @layer components {
 
-  /* Buttons */
+  /* Etiqueta pequeña en versalitas espaciadas (vernáculo hotelero). */
+  .eyebrow {
+    @apply text-eyebrow font-medium uppercase text-brand-navy/60 dark:text-white/55;
+  }
+
+  /* Buttons — rectos, en mayúsculas espaciadas. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl
-           bg-brand-gold px-6 py-3 text-sm font-semibold text-brand-navy
-           shadow-gold transition-all duration-200
-           hover:bg-brand-gold-300 hover:shadow-lg hover:-translate-y-0.5
-           active:scale-[0.97] active:translate-y-0
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold focus-visible:ring-offset-2
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-[2px]
+           bg-brand-navy px-7 py-3.5 text-[0.75rem] font-medium uppercase tracking-label text-white
+           transition-colors duration-300 ease-silk
+           hover:bg-brand-navy-700
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-gold focus-visible:ring-offset-2 focus-visible:ring-offset-transparent
+           disabled:cursor-not-allowed disabled:opacity-40
+           dark:bg-[#ECEAE4] dark:text-brand-navy dark:hover:bg-white;
+  }
+
+  /* Botón claro, para usar sobre fotografía o bandas oscuras. */
+  .btn-light {
+    @apply inline-flex items-center justify-center gap-2.5 rounded-[2px]
+           bg-white px-7 py-3.5 text-[0.75rem] font-medium uppercase tracking-label text-brand-navy
+           transition-colors duration-300 ease-silk hover:bg-brand-stone
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white focus-visible:ring-offset-2;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2.5 rounded-[2px]
+           border border-brand-navy/25 px-7 py-3.5 text-[0.75rem] font-medium uppercase tracking-label text-brand-navy
+           transition-colors duration-300 ease-silk
+           hover:border-brand-navy hover:bg-brand-navy hover:text-white
+           dark:border-white/25 dark:text-white dark:hover:border-white dark:hover:bg-white dark:hover:text-brand-navy;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl
-           border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white
-           backdrop-blur-sm transition-all duration-200
-           hover:bg-white/20 hover:-translate-y-0.5
-           active:scale-[0.97]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-1;
+    @apply inline-flex items-center justify-center gap-2.5 rounded-[2px]
+           border border-white/40 px-7 py-3.5 text-[0.75rem] font-medium uppercase tracking-label text-white
+           transition-colors duration-300 ease-silk
+           hover:border-white hover:bg-white hover:text-brand-navy
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl
+    @apply inline-flex items-center justify-center gap-2 rounded-[2px]
            px-4 py-2 text-sm font-medium text-brand-navy dark:text-gray-200
-           transition-all duration-150
-           hover:bg-brand-navy/10 dark:hover:bg-white/10
-           active:scale-[0.97]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold;
+           transition-colors duration-200
+           hover:bg-brand-navy/5 dark:hover:bg-white/10
+           focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-gold;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl
-           border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-semibold text-red-700
-           transition-all duration-150 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300
+    @apply inline-flex items-center justify-center gap-2 rounded-[2px]
+           border border-red-200 bg-red-50 px-5 py-2.5 text-sm font-medium text-red-800
+           transition-colors duration-150 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300
            hover:bg-red-100 dark:hover:bg-red-900/40
-           active:scale-[0.97]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500;
   }
 
-  /* Press effect */
-  .btn-press {
-    transition: transform 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms ease;
+  /* Enlace con subrayado que se dibuja (CTA editorial). */
+  .link-line {
+    @apply relative inline-flex items-center gap-2 pb-1 text-[0.75rem] font-medium uppercase tracking-label;
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 500ms var(--ease-silk);
   }
-  .btn-press:active { transform: scale(0.97); }
+  .link-line:hover { background-size: 0% 1px; background-position: 100% 100%; }
+  .link-line svg { transition: transform 400ms var(--ease-silk); }
+  .link-line:hover svg { transform: translateX(4px); }
 
-  /* Glass card */
+  .btn-press { transition: transform 150ms var(--ease-silk); }
+  .btn-press:active { transform: scale(0.98); }
+
   .glass {
-    @apply rounded-2xl border border-white/10
-           bg-glass-gradient backdrop-blur-xl shadow-glass;
+    @apply rounded-2xl border border-white/15 bg-white/10 backdrop-blur-xl;
   }
 
-  /* Premium card */
   .card {
-    @apply rounded-2.5xl bg-white dark:bg-brand-navy-800
-           shadow-card transition-all duration-300
-           hover:shadow-card-hover hover:-translate-y-1;
+    @apply rounded-2xl border border-brand-navy/10 bg-white transition-shadow duration-300
+           hover:shadow-card-hover dark:border-white/10 dark:bg-brand-navy-800;
   }
 
-  /* Input premium */
+  /* Inputs — línea fina, sin cajas pesadas. */
   .input-field {
-    @apply w-full rounded-xl border border-gray-200 bg-white px-4 py-3
-           text-sm text-brand-navy placeholder-gray-400
-           transition-all duration-200
-           dark:border-white/10 dark:bg-brand-navy-700 dark:text-gray-100 dark:placeholder-gray-500
-           focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/20
-           hover:border-gray-300 dark:hover:border-white/20;
+    @apply w-full rounded-[2px] border border-brand-navy/15 bg-white px-4 py-3
+           text-[0.95rem] text-brand-navy placeholder-brand-navy/35
+           transition-colors duration-200
+           dark:border-white/15 dark:bg-brand-navy-800 dark:text-gray-100 dark:placeholder-white/30
+           focus:border-brand-navy focus:outline-none focus:ring-0
+           dark:focus:border-white/60
+           hover:border-brand-navy/30 dark:hover:border-white/25;
   }
 
   .input-label {
-    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400;
+    @apply mb-2 block text-eyebrow font-medium uppercase text-brand-navy/60 dark:text-white/55;
   }
 
-  /* Gradient text */
-  .gradient-text {
-    @apply bg-gold-gradient bg-clip-text text-transparent;
-  }
+  .gradient-text { @apply text-brand-gold-300; }
 
-  /* Shimmer skeleton */
   .skeleton {
-    @apply rounded-lg bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200
+    @apply rounded-[2px] bg-gradient-to-r from-brand-stone via-[#EFEDE8] to-brand-stone
            dark:from-brand-navy-800 dark:via-brand-navy-700 dark:to-brand-navy-800;
     background-size: 400px 100%;
     animation: shimmer 1.6s ease-in-out infinite;
   }
 
-  /* Nav link active indicator */
   .nav-link {
-    @apply relative text-sm font-medium text-gray-600 dark:text-gray-300
-           transition-colors duration-150
-           hover:text-brand-navy dark:hover:text-white
-           after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0
-           after:rounded-full after:bg-brand-gold after:transition-all after:duration-200
-           hover:after:w-full;
+    @apply relative text-[0.8125rem] font-normal tracking-[0.06em] text-current opacity-80
+           transition-opacity duration-200 hover:opacity-100
+           after:absolute after:bottom-0.5 after:left-3 after:right-3 after:h-px after:origin-left after:scale-x-0
+           after:bg-current after:transition-transform after:duration-500 after:ease-silk
+           hover:after:scale-x-100;
   }
 
-  /* Badge */
   .badge-available {
     @apply inline-flex items-center gap-1.5 rounded-full
-           bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700
-           dark:bg-emerald-950/50 dark:text-emerald-300;
+           bg-white/95 px-2.5 py-1 text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-emerald-800
+           dark:bg-emerald-950/70 dark:text-emerald-200;
   }
 
   .badge-pending {
     @apply inline-flex items-center gap-1.5 rounded-full
-           bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700
-           dark:bg-amber-950/50 dark:text-amber-300;
+           bg-white/95 px-2.5 py-1 text-[0.6875rem] font-medium uppercase tracking-[0.12em] text-brand-navy/70
+           dark:bg-brand-navy-800/90 dark:text-white/70;
   }
 
-  /* Step indicator dot */
   .step-dot {
-    @apply flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold
+    @apply flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium
            transition-all duration-300;
   }
+  .step-dot-active   { @apply bg-brand-navy text-white dark:bg-white dark:text-brand-navy; }
+  .step-dot-done     { @apply bg-brand-gold text-white; }
+  .step-dot-inactive { @apply border border-brand-navy/20 bg-transparent text-brand-navy/50 dark:border-white/20 dark:text-white/50; }
 
-  .step-dot-active   { @apply bg-brand-gold text-brand-navy shadow-gold; }
-  .step-dot-done     { @apply bg-emerald-500 text-white; }
-  .step-dot-inactive { @apply bg-gray-200 text-gray-500 dark:bg-brand-navy-700 dark:text-gray-400; }
-
-  /* Section heading */
   .section-title {
-    @apply font-display text-3xl font-semibold tracking-tight text-brand-navy dark:text-gray-50
-           md:text-4xl;
+    @apply font-display text-display-sm text-brand-navy dark:text-white;
   }
+
+  /* Contenedor editorial estándar. */
+  .shell {
+    @apply mx-auto w-full max-w-[1320px] px-5 sm:px-8 lg:px-12;
+  }
+
+  .rule { @apply h-px w-full bg-brand-navy/12 dark:bg-white/10; }
 }
 
 /* ─── Utilities ─────────────────────────────────────────────── */
 @layer utilities {
   .text-balance { text-wrap: balance; }
 
-  /* Noise texture overlay */
   .noise::after {
     content: "";
     position: absolute;
     inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
     pointer-events: none;
     border-radius: inherit;
   }
 
-  /* Scroll snap */
   .snap-x-mandatory { scroll-snap-type: x mandatory; }
   .snap-start       { scroll-snap-align: start; }
+
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
 }
+
+/* ─── Revelado al hacer scroll ─────────────────────────────────
+   Gated por `html.js-reveal` (lo agrega <RevealObserver/>): sin JS todo
+   queda visible. Variantes: data-reveal="" (sube + aparece),
+   ="fade", ="image" (cortina que se abre), ="line" (filete que se dibuja). */
+html.js-reveal [data-reveal] {
+  transition:
+    opacity 1s var(--ease-silk),
+    transform 1.1s var(--ease-silk),
+    clip-path 1.3s cubic-bezier(0.65, 0, 0.35, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+html.js-reveal [data-reveal=""]:not(.is-in),
+html.js-reveal [data-reveal="up"]:not(.is-in) {
+  opacity: 0;
+  transform: translateY(28px);
+}
+html.js-reveal [data-reveal="fade"]:not(.is-in) { opacity: 0; }
+html.js-reveal [data-reveal="image"] { clip-path: inset(0 0 0 0); }
+html.js-reveal [data-reveal="image"]:not(.is-in) { clip-path: inset(12% 8% 12% 8%); }
+html.js-reveal [data-reveal="image"] img { transition: transform 1.8s var(--ease-silk); }
+html.js-reveal [data-reveal="image"]:not(.is-in) img { transform: scale(1.18); }
+html.js-reveal [data-reveal="line"] { transform-origin: left; }
+html.js-reveal [data-reveal="line"]:not(.is-in) { transform: scaleX(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  html.js-reveal [data-reveal]:not(.is-in) { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+  html.js-reveal [data-reveal] img { transform: none !important; }
+}
+
+/* Texto que sube línea a línea dentro de una máscara (hero). */
+.mask-line { display: block; overflow: hidden; padding-bottom: 0.08em; }
+.mask-line > span {
+  display: block;
+  animation: line-rise 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+/* Imagen que aparece suave al cargar. */
+.img-fade { opacity: 0; transition: opacity 900ms var(--ease-silk); }
+.img-fade.is-loaded { opacity: 1; }
 
 /* ─── Keyframes ─────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }
 }
-
+@keyframes line-rise {
+  from { transform: translateY(105%); }
+  to   { transform: translateY(0); }
+}
 @keyframes check-draw {
   from { stroke-dashoffset: 48; }
-  to   { stroke-dashoffset: 0;  }
+  to   { stroke-dashoffset: 0; }
 }
-
 @keyframes hero-in {
-  from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
-  to   { opacity: 1; transform: translateY(0);    filter: blur(0); }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes notice-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes notice-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
+@keyframes notice-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes day-in {
-  from { opacity: 0; transform: scale(0.92); }
+  from { opacity: 0; transform: scale(0.94); }
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* ─── Legacy animate classes (keep backward compat) ────────── */
-.animate-hero-in    { animation: hero-in    600ms cubic-bezier(0.16,1,0.3,1) both; }
-.animate-notice-in  { animation: notice-in  150ms cubic-bezier(0.16,1,0.3,1) both; }
-.animate-check-draw { stroke-dasharray: 48; animation: check-draw 500ms cubic-bezier(0.16,1,0.3,1) both; }
-.animate-day-in     { animation: day-in     150ms cubic-bezier(0.16,1,0.3,1) both; }
+/* ─── Legacy animate classes (compatibilidad) ──────────────── */
+.animate-hero-in    { animation: hero-in    700ms cubic-bezier(0.22,1,0.36,1) both; }
+.animate-notice-in  { animation: notice-in  200ms cubic-bezier(0.22,1,0.36,1) both; }
+.animate-check-draw { stroke-dasharray: 48; animation: check-draw 600ms cubic-bezier(0.22,1,0.36,1) both; }
+.animate-day-in     { animation: day-in     150ms cubic-bezier(0.22,1,0.36,1) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-notice-in,
@@ -248,58 +317,71 @@
   .animate-day-in   { animation-name: notice-fade; animation-duration: 150ms; }
   .animate-check-draw { animation: none; stroke-dashoffset: 0; }
   .btn-press:active   { transform: none; }
+  .mask-line > span   { animation: none; }
 }
 
 /* ─── Contraste AA en modo claro ───────────────────────────── */
-/* El dorado #C9A84C como texto sobre blanco (~2.2:1) no llega a AA: en
-   modo claro se oscurece solo el color de texto (fondos, bordes e iconos
-   decorativos intactos). En oscuro se mantiene el dorado original. */
-html:not(.dark) .text-brand-gold {
-  color: #7a5f1c;
-}
-html:not(.dark) .text-brand-gold\/80 {
-  color: rgb(122 95 28 / 0.8);
-}
+/* El latón #A8874F como texto pequeño sobre papel no llega a AA:
+   en modo claro se usa la variante oscura; en oscuro, una más clara. */
+html:not(.dark) .text-brand-gold { color: #7A6136; }
+html:not(.dark) .text-brand-gold\/80 { color: rgb(122 97 54 / 0.8); }
+html.dark .text-brand-gold { color: #C9AD7A; }
 
-/* ─── Calendar overrides ───────────────────────────────────── */
-.cal-available:not(.rdp-day_selected) {
-  color: #059669;
-  font-weight: 700;
+/* ─── Calendario (react-day-picker v10) ───────────────────── */
+html .rdp-root {
+  --rdp-accent-color: #1B1F1D;
+  --rdp-accent-background-color: rgba(168,135,79,0.16);
+  --rdp-today-color: #7A6136;
+  --rdp-day-height: 42px;
+  --rdp-day-width: 42px;
+  --rdp-day_button-height: 40px;
+  --rdp-day_button-width: 40px;
+  --rdp-day_button-border-radius: 2px;
+  --rdp-selected-border: 1px solid #1B1F1D;
+  --rdp-nav-height: 2.5rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.dark .rdp-root {
+  --rdp-accent-color: #ECEAE4;
+  --rdp-accent-background-color: rgba(168,135,79,0.24);
+  --rdp-today-color: #C9AD7A;
+  --rdp-selected-border: 1px solid #ECEAE4;
+}
+.rdp-root .rdp-caption_label { font-family: "Gilda Display", Georgia, serif; font-size: 1.15rem; font-weight: 400; text-transform: capitalize; }
+.rdp-root .rdp-weekday { font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.5; font-weight: 500; }
+.rdp-root .rdp-chevron { fill: currentColor; width: 14px; height: 14px; }
+.rdp-root .rdp-day_button { transition: background-color 200ms, color 200ms; }
+.rdp-root .rdp-day_button:hover:not(:disabled) { background-color: rgba(27,31,29,0.06); }
+.dark .rdp-root .rdp-day_button:hover:not(:disabled) { background-color: rgba(255,255,255,0.08); }
+.rdp-root .rdp-selected .rdp-day_button { background-color: #1B1F1D; color: #fff; font-weight: 500; }
+.dark .rdp-root .rdp-selected .rdp-day_button { background-color: #ECEAE4; color: #1B1F1D; }
+.rdp-root .rdp-range_middle .rdp-day_button { background-color: transparent; color: inherit; }
+.rdp-root .rdp-range_middle { background-color: var(--rdp-accent-background-color); }
+
+/* Días con stock real */
+.cal-available:not(.rdp-selected) {
+  color: #2F6B4F;
+  font-weight: 600;
   text-decoration: underline;
-  text-underline-offset: 3px;
-  animation: day-in 150ms cubic-bezier(0.16,1,0.3,1) both;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  animation: day-in 150ms cubic-bezier(0.22,1,0.36,1) both;
 }
-.dark .cal-available:not(.rdp-day_selected) { color: #34d399; }
+.dark .cal-available:not(.rdp-selected) { color: #8FC9A9; }
 
-/* Rango ya elegido (solo visual, DatePickerButton): el otro extremo se
-   marca como seleccionado y el medio se sombrea. */
-.cal-range-from:not(.rdp-day_selected) .rdp-day_button,
-button.cal-range-from:not(.rdp-day_selected) {
-  background-color: #C9A84C !important;
-  color: #0A1628 !important;
-  font-weight: 700 !important;
-}
-.cal-range-middle .rdp-day_button,
-button.cal-range-middle {
-  background-color: rgba(201,168,76,0.18) !important;
-  border-radius: 0 !important;
-}
-.dark .cal-range-middle .rdp-day_button,
-.dark button.cal-range-middle {
-  background-color: rgba(201,168,76,0.25) !important;
-}
-
-/* rdp overrides to match our theme */
-.rdp-button:hover:not(.rdp-day_selected) {
-  background-color: rgba(201,168,76,0.12) !important;
-  color: #0A1628 !important;
-}
-.dark .rdp-button:hover:not(.rdp-day_selected) {
-  background-color: rgba(201,168,76,0.15) !important;
+/* Rango ya elegido (solo visual, DatePickerButton). */
+.cal-range-from:not(.rdp-selected) .rdp-day_button {
+  background-color: #1B1F1D !important;
   color: #fff !important;
 }
-.rdp-day_selected {
-  background-color: #C9A84C !important;
-  color: #0A1628 !important;
-  font-weight: 700 !important;
+.dark .cal-range-from:not(.rdp-selected) .rdp-day_button {
+  background-color: #ECEAE4 !important;
+  color: #1B1F1D !important;
 }
+.cal-range-middle .rdp-day_button {
+  background-color: rgba(168,135,79,0.16) !important;
+  border-radius: 0 !important;
+}
+.dark .cal-range-middle .rdp-day_button { background-color: rgba(168,135,79,0.24) !important; }

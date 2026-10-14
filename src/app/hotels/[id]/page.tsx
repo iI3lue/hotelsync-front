@@ -1,28 +1,31 @@
+import type { Metadata } from "next";
+import Link from "next/link";
 import {
   fetchHotelById,
   fetchRoomTypes,
+  formatPrice,
   withSearch,
   type SearchState,
 } from "@/lib/api";
+import { hotelImage, roomImage } from "@/lib/imagery";
+import { cityLine } from "@/lib/destinations";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import PriceFrom from "@/components/PriceFrom";
 import RoomTypeCard from "@/components/RoomTypeCard";
 import EmptyState from "@/components/EmptyState";
+import ParallaxImage from "@/components/ui/ParallaxImage";
+import Photo from "@/components/ui/Photo";
+import LocalTime from "@/components/ui/LocalTime";
+import Arrow from "@/components/ui/Arrow";
+import { AmenityIcon, amenityLabel } from "@/components/ui/Amenity";
 
-/* ─── Deterministic gradient selection ───────────────────────── */
-const HERO_GRADIENTS = [
-  "from-slate-900 via-indigo-950 to-blue-900",
-  "from-brand-navy-950 via-brand-navy to-slate-900",
-  "from-blue-950 via-slate-900 to-indigo-900",
-  "from-emerald-950 via-teal-950 to-slate-950",
-];
-
-function getGradient(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = (hash << 5) - hash + name.charCodeAt(i);
-  }
-  return HERO_GRADIENTS[Math.abs(hash) % HERO_GRADIENTS.length];
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const hotel = await fetchHotelById(id).catch(() => null);
+  if (!hotel) return { title: "Hotel" };
+  return {
+    title: `${hotel.name}, ${hotel.city}`,
+    description: `${hotel.name} en ${hotel.city}, ${hotel.country}. ${cityLine(hotel.city)}`,
+  };
 }
 
 export default async function HotelDetailPage({
@@ -54,186 +57,255 @@ export default async function HotelDetailPage({
 
   if (!hotel) {
     return (
-      <EmptyState
-        title="No encontramos este hotel"
-        description="El hotel no existe o el servicio no responde. Volvé al listado e intentá de nuevo."
-        actionHref={withSearch("/", search)}
-        actionLabel="Volver al inicio"
-      />
+      <div className="shell py-16">
+        <EmptyState
+          title="No encontramos este hotel"
+          description="Puede que el enlace haya cambiado o que el servicio no responda. Volvé al listado y probá de nuevo."
+          actionHref={withSearch("/", search)}
+          actionLabel="Volver al inicio"
+        />
+      </div>
     );
   }
 
   const rates = roomTypes.map((r) => Number(r.base_rate));
   const from = rates.length > 0 ? Math.min(...rates) : null;
-  const gradient = getGradient(hotel.name);
+  const maxGuests = roomTypes.reduce((m, r) => Math.max(m, r.capacity), 0);
+  const amenities = Array.from(new Set(roomTypes.flatMap((r) => r.amenities ?? [])));
+  const availabilityHref = withSearch(`/hotels/${id}/availability`, search);
+  const bookHref = withSearch("/reservas/nueva", search, { room_type_id: undefined, date: undefined, hotel: id });
+
+  const gallery = [
+    { src: hotelImage(hotel, 2000), alt: hotel.name },
+    ...roomTypes.slice(0, 4).map((r) => ({ src: roomImage(r, 1200), alt: r.name })),
+  ];
+
+  const sections = [
+    { id: "resumen", label: "El hotel" },
+    ...(roomTypes.length > 0 ? [{ id: "habitaciones", label: "Habitaciones" }] : []),
+    ...(hotel.cancellationPolicies?.length ? [{ id: "politicas", label: "Políticas" }] : []),
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8">
-      <Breadcrumbs items={[{ label: hotel.name }]} />
+    <div className="pb-16 md:pb-0">
+      {/* ── Hero ── */}
+      <section className="relative isolate flex h-[86svh] min-h-[560px] items-end overflow-hidden bg-brand-navy-950 text-white">
+        <ParallaxImage src={hotelImage(hotel, 2400)} alt={hotel.name} priority strength={140} />
+        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/35" />
 
-      {/* Hero Hotel Banner */}
-      <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-8 text-white shadow-xl md:p-12`}>
-        {hotel.image_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={hotel.image_url}
-              alt={hotel.name}
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-            />
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          </>
-        ) : null}
-        {/* Subtle decorative glow circles */}
-        <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand-gold/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-20 h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="shell relative z-10 pb-14 md:pb-20">
+          <div className="animate-fade-in" style={{ animationDelay: "300ms" }}>
+            <Breadcrumbs tone="inverse" items={[{ label: "Hoteles", href: withSearch("/buscar", search) }, { label: hotel.city }]} />
+          </div>
+          <h1 className="mt-8 max-w-5xl font-display text-display-lg">
+            <span className="mask-line"><span style={{ ["--d" as string]: "250ms" }}>{hotel.name}</span></span>
+          </h1>
 
-        <div className="relative z-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-2xl space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-gold/20 px-3 py-1 text-xs font-semibold text-brand-gold backdrop-blur-sm border border-brand-gold/30">
-                ★ 4.8 · Selección Exclusiva
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-slate-200 backdrop-blur-sm border border-white/10">
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {hotel.timezone}
-              </span>
+          <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-white/20 pt-6 md:mt-10 lg:grid-cols-4">
+            <div className="animate-slide-up" style={{ animationDelay: "600ms" }}>
+              <p className="text-eyebrow uppercase text-white/55">Ubicación</p>
+              <p className="mt-2 text-[0.95rem]">{hotel.address ? hotel.address : `${hotel.city}, ${hotel.country}`}</p>
+              {hotel.address && <p className="text-[0.85rem] text-white/60">{hotel.city}, {hotel.country}</p>}
             </div>
-
-            <h1 className="font-heading text-3xl font-extrabold tracking-tight text-white md:text-5xl">
-              {hotel.name}
-            </h1>
-
-            {/* Dirección y ubicación desde la base de datos */}
-            <div className="space-y-1 pt-1">
-              {hotel.address && (
-                <p className="flex items-center gap-2 text-sm font-medium text-amber-200/90 md:text-base">
-                  <svg className="h-4 w-4 text-brand-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                  </svg>
-                  <span>{hotel.address}</span>
-                </p>
-              )}
-              <p className={`flex items-center gap-2 text-xs text-slate-300 md:text-sm ${hotel.address ? "pl-6" : ""}`}>
-                {!hotel.address && (
-                  <svg className="h-4 w-4 text-brand-gold shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                  </svg>
-                )}
-                <span>{hotel.city}, {hotel.country}</span>
+            <div className="animate-slide-up" style={{ animationDelay: "680ms" }}>
+              <p className="text-eyebrow uppercase text-white/55">Hora local</p>
+              <p className="mt-2 text-[0.95rem]">
+                <LocalTime timeZone={hotel.timezone} /> <span className="text-white/60">en {hotel.city}</span>
               </p>
             </div>
-          </div>
-
-          {from !== null && (
-            <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md dark:border-white/10">
-              <span className="block text-xs font-medium uppercase tracking-wider text-slate-300">Tarifa desde</span>
-              <div className="text-3xl font-extrabold text-white tabular-nums">
-                <PriceFrom rate={from} size="lg" />
+            {roomTypes.length > 0 && (
+              <div className="hidden animate-slide-up lg:block" style={{ animationDelay: "760ms" }}>
+                <p className="text-eyebrow uppercase text-white/55">Habitaciones</p>
+                <p className="mt-2 text-[0.95rem]">
+                  {roomTypes.length} {roomTypes.length === 1 ? "tipo" : "tipos"} · hasta {maxGuests} huéspedes
+                </p>
               </div>
-            </div>
-          )}
+            )}
+            {from !== null && (
+              <div className="col-span-2 animate-slide-up lg:col-span-1 lg:text-right" style={{ animationDelay: "840ms" }}>
+                <p className="text-eyebrow uppercase text-white/55">Tarifa desde</p>
+                <p className="mt-1 font-display text-[2rem] leading-none tabular-nums">
+                  {formatPrice(from)} <span className="font-sans text-[0.85rem] text-white/60">/ noche</span>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Sub-navegación fija ── */}
+      <div className="sticky top-0 z-40 border-b border-brand-navy/10 bg-brand-paper/95 backdrop-blur-md dark:border-white/10 dark:bg-brand-navy-900/95">
+        <div className="shell flex h-16 items-center justify-between gap-6">
+          <nav aria-label="Secciones del hotel" className="no-scrollbar -mx-3 flex min-w-0 overflow-x-auto">
+            {sections.map((s) => (
+              <a key={s.id} href={`#${s.id}`} className="nav-link shrink-0 px-3 py-2 text-brand-navy dark:text-white">
+                {s.label}
+              </a>
+            ))}
+          </nav>
+          <div className="hidden shrink-0 items-center gap-6 md:flex">
+            <Link href={availabilityHref} className="link-line text-brand-navy dark:text-white">
+              Ver fechas libres
+            </Link>
+            <Link href={bookHref} className="btn-primary py-3">
+              Reservar
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Action CTA Bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <a
-          href={withSearch(`/hotels/${id}/availability`, search)}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-gold to-amber-500 px-6 py-3 text-sm font-bold text-brand-navy shadow-gold transition-all duration-200 hover:brightness-105 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold"
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-          </svg>
-          <span>Consultar disponibilidad general</span>
-        </a>
-
-        <a
-          href={withSearch("/reservas/nueva", search, { room_type_id: undefined, date: undefined, hotel: id })}
-          className="inline-flex items-center gap-2 rounded-xl border border-brand-navy/15 bg-white px-6 py-3 text-sm font-semibold text-brand-navy shadow-sm transition-all duration-200 hover:border-brand-gold hover:bg-slate-50 dark:border-white/15 dark:bg-brand-navy-800 dark:text-white dark:hover:border-brand-gold"
-        >
-          <span>Reservar ahora</span>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-          </svg>
-        </a>
-      </div>
-
-      {/* Cancellation Policies con diseño limpio, contraste y colores acordes */}
-      {hotel.cancellationPolicies && hotel.cancellationPolicies.length > 0 && (
-        <section
-          aria-labelledby="cancel-title"
-          className="rounded-2.5xl border border-brand-navy/8 bg-white p-6 shadow-card dark:border-white/8 dark:bg-brand-navy-800"
-        >
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-gold/15 text-brand-gold">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-2.48-5.719A48.474 48.474 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018a16.5 16.5 0 008.25 14.28 16.5 16.5 0 008.25-14.28V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-.702 0-1.398.015-2.09.044z" />
-              </svg>
-            </div>
-            <div>
-              <h2 id="cancel-title" className="font-heading text-lg font-bold text-brand-navy dark:text-white">
-                Políticas de cancelación
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Condiciones claras y garantizadas antes de efectuar tu pago
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {hotel.cancellationPolicies.map((policy) => (
-              <div
-                key={policy.policy_id}
-                className="rounded-xl border border-brand-gold/20 bg-gradient-to-br from-brand-gold/5 via-amber-500/5 to-transparent p-4 dark:border-brand-gold/30 dark:bg-brand-navy-700/60"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <p className="font-semibold text-sm text-brand-navy dark:text-white">
-                    {policy.name}
-                  </p>
-                </div>
-                <p className="mt-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-                  {policy.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Room Types Grid */}
-      <section className="space-y-4">
-        <div className="flex items-end justify-between">
+      {/* ── Resumen ── */}
+      <section id="resumen" aria-labelledby="resumen-title" className="shell scroll-mt-20 pt-24 md:pt-32">
+        <div className="grid gap-10 lg:grid-cols-[14rem_1fr]">
+          <p className="eyebrow" data-reveal="fade">El hotel</p>
           <div>
-            <h2 className="font-heading text-2xl font-extrabold text-brand-navy dark:text-white md:text-3xl">
-              Habitaciones Disponibles
+            <h2 id="resumen-title" data-reveal="" className="max-w-4xl font-display text-[clamp(1.75rem,3.2vw,2.75rem)] leading-[1.2] text-brand-navy dark:text-white">
+              {cityLine(hotel.city)} {hotel.name} es tu casa en {hotel.city}.
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Elegí tu habitación para consultar sus fechas libres o reservar directamente.
-            </p>
+
+            {amenities.length > 0 && (
+              <div className="mt-16" data-reveal="">
+                <h3 className="eyebrow">Comodidades</h3>
+                <ul className="mt-6 grid grid-cols-2 gap-x-8 sm:grid-cols-3 lg:grid-cols-4">
+                  {amenities.map((a) => (
+                    <li key={a} className="flex items-center gap-3 border-t border-brand-navy/10 py-4 text-[0.925rem] text-brand-navy/80 dark:border-white/10 dark:text-white/75">
+                      <AmenityIcon amenity={a} className="h-5 w-5 shrink-0 text-brand-gold" />
+                      {amenityLabel(a)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            {roomTypes.length} {roomTypes.length === 1 ? "opción" : "opciones"}
-          </span>
+        </div>
+      </section>
+
+      {/* ── Galería ── */}
+      {gallery.length > 1 && (() => {
+        const shown = gallery.length >= 5 ? 5 : gallery.length >= 3 ? 3 : 2;
+        const cols = shown === 5 ? "md:grid-cols-4" : shown === 3 ? "md:grid-cols-3" : "md:grid-cols-2";
+        return (
+          <section aria-label="Galería" className="shell pt-24 md:pt-32">
+            <div className={`grid grid-cols-2 gap-3 md:grid-rows-2 md:gap-4 ${cols}`}>
+              {gallery.slice(0, shown).map((g, i) => {
+                const big = i === 0 && shown >= 3;
+                const span = big
+                  ? "col-span-2 row-span-2 aspect-[4/3] md:aspect-auto"
+                  : shown === 2
+                    ? "col-span-2 aspect-[4/3] md:col-span-1 md:row-span-2"
+                    : "aspect-square";
+                return (
+                  <figure
+                    key={g.src + i}
+                    data-reveal="image"
+                    style={{ ["--reveal-delay" as string]: `${i * 90}ms` }}
+                    className={`relative overflow-hidden bg-brand-stone dark:bg-brand-navy-800 ${span}`}
+                  >
+                    <Photo src={g.src} alt={g.alt} className="absolute inset-0 h-full w-full object-cover" />
+                    {i > 0 && (
+                      <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-4 pb-3 pt-10 text-[0.8rem] text-white">
+                        {g.alt}
+                      </figcaption>
+                    )}
+                  </figure>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* ── Habitaciones ── */}
+      <section id="habitaciones" aria-labelledby="rooms-title" className="shell scroll-mt-20 pt-28 md:pt-40">
+        <div className="mb-16 flex flex-wrap items-end justify-between gap-6 md:mb-24">
+          <div>
+            <p className="eyebrow" data-reveal="fade">Habitaciones y suites</p>
+            <h2 id="rooms-title" data-reveal="" className="mt-4 font-display text-display-md text-brand-navy dark:text-white">
+              Elegí dónde dormir
+            </h2>
+          </div>
+          <p data-reveal="fade" className="max-w-sm text-[0.95rem] text-brand-navy/60 dark:text-white/55">
+            {roomTypes.length} {roomTypes.length === 1 ? "opción" : "opciones"}. Mirá las fechas libres de cada una o reservá directo.
+          </p>
         </div>
 
         {roomTypes.length === 0 ? (
-          <p className="text-slate-500 dark:text-slate-400">
-            No hay tipos de habitación disponibles en este momento.
-          </p>
+          <EmptyState
+            title="Habitaciones próximamente"
+            description="Este hotel todavía no publicó sus habitaciones. Mientras tanto, podés consultar otros destinos."
+            actionHref="/buscar"
+            actionLabel="Ver otros hoteles"
+          />
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {roomTypes.map((roomType) => (
-              <RoomTypeCard key={roomType.room_type_id} roomType={roomType} search={search} />
+          <div className="space-y-24 md:space-y-36">
+            {roomTypes.map((roomType, i) => (
+              <RoomTypeCard key={roomType.room_type_id} roomType={roomType} search={search} index={i} />
             ))}
           </div>
         )}
       </section>
+
+      {/* ── Políticas ── */}
+      {hotel.cancellationPolicies && hotel.cancellationPolicies.length > 0 && (
+        <section id="politicas" aria-labelledby="cancel-title" className="shell scroll-mt-20 pt-28 md:pt-40">
+          <div className="grid gap-10 lg:grid-cols-[14rem_1fr]">
+            <div>
+              <p className="eyebrow" data-reveal="fade">Antes de reservar</p>
+            </div>
+            <div>
+              <h2 id="cancel-title" data-reveal="" className="font-display text-display-sm text-brand-navy dark:text-white">
+                Políticas de cancelación
+              </h2>
+              <p data-reveal="fade" className="mt-3 max-w-lg text-[0.95rem] text-brand-navy/60 dark:text-white/55">
+                Las condiciones se muestran antes de confirmar, para que reserves sabiendo exactamente qué esperar.
+              </p>
+              <dl className="mt-12 grid gap-x-12 sm:grid-cols-2">
+                {hotel.cancellationPolicies.map((policy, i) => (
+                  <div key={policy.policy_id} data-reveal="" style={{ ["--reveal-delay" as string]: `${i * 80}ms` }} className="border-t border-brand-navy/15 py-7 dark:border-white/15">
+                    <dt className="font-display text-[1.4rem] text-brand-navy dark:text-white">{policy.name}</dt>
+                    <dd className="mt-2 text-[0.925rem] leading-relaxed text-brand-navy/65 dark:text-white/60">{policy.description}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Cierre ── */}
+      <section className="shell pt-28 md:pt-40">
+        <div className="flex flex-col items-start justify-between gap-10 border-t border-brand-navy/15 pt-14 dark:border-white/15 md:flex-row md:items-end">
+          <h2 data-reveal="" className="max-w-2xl font-display text-display-md text-brand-navy dark:text-white">
+            ¿Te vemos en {hotel.city}?
+          </h2>
+          <div data-reveal="fade" className="flex flex-wrap items-center gap-6">
+            <Link href={availabilityHref} className="link-line text-brand-navy dark:text-white">
+              Consultar disponibilidad
+            </Link>
+            <Link href={bookHref} className="btn-primary">
+              Reservar ahora <Arrow className="h-2.5 w-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Barra de reserva móvil ── */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-navy/10 bg-brand-paper/95 px-5 py-3 backdrop-blur-md dark:border-white/10 dark:bg-brand-navy-900/95 md:hidden" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+        <div className="flex items-center justify-between gap-4">
+          {from !== null ? (
+            <p className="leading-tight text-brand-navy dark:text-white">
+              <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/50">Desde</span>
+              <span className="tabular-nums">{formatPrice(from)}</span>
+              <span className="ml-1 text-xs text-brand-navy/50 dark:text-white/50">/ noche</span>
+            </p>
+          ) : (
+            <span className="font-display text-lg text-brand-navy dark:text-white">{hotel.city}</span>
+          )}
+          <Link href={bookHref} className="btn-primary px-6 py-3">
+            Reservar
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

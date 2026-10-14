@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState, type ReactNode, type RefObject } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
 interface PopoverProps {
@@ -33,6 +33,17 @@ export default function Popover({
   className = "",
 }: PopoverProps) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [above, setAbove] = useState(false);
+
+  // Si no entra debajo del ancla pero sí arriba, se abre hacia arriba.
+  useLayoutEffect(() => {
+    if (!open || !rect || !panelRef.current) return;
+    const h = panelRef.current.offsetHeight;
+    const fitsBelow = rect.bottom + 8 + h <= window.innerHeight;
+    const fitsAbove = rect.top - 8 - h >= 0;
+    setAbove(!fitsBelow && fitsAbove);
+  }, [open, rect]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -85,11 +96,14 @@ export default function Popover({
     >
       <div
         data-popover-panel
-        className={`absolute animate-scale-in ${className}`}
+        ref={panelRef}
+        className={`absolute animate-scale-in ${above ? "origin-bottom" : "origin-top"} ${className}`}
         style={
           rect
             ? {
-                top: rect.bottom + 8,
+                ...(above
+                  ? { bottom: window.innerHeight - rect.top + 8 }
+                  : { top: rect.bottom + 8 }),
                 ...(align === "right"
                   ? { right: Math.max(8, window.innerWidth - rect.right) }
                   : { left: Math.max(8, rect.left) }),
