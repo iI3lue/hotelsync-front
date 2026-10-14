@@ -21,7 +21,7 @@ function Avatar({ profile }: { profile: AuthProfile }) {
   return (
     <div
       aria-hidden="true"
-      className="flex h-20 w-20 items-center justify-center rounded-full bg-brand-gold text-xl font-bold text-brand-navy"
+      className="flex h-20 w-20 items-center justify-center rounded-full border border-brand-gold font-display text-2xl text-brand-navy dark:text-white"
     >
       {profile.email.slice(0, 2).toUpperCase()}
     </div>
@@ -81,11 +81,11 @@ export default function ProfileForm() {
   }
 
   return (
-    <div className="rounded-2.5xl border border-brand-navy/6 bg-white p-6 shadow-card dark:border-white/6 dark:bg-brand-navy-800 md:p-8">
+    <div className="border border-brand-navy/10 bg-white p-6 dark:border-white/10 dark:bg-brand-navy-800 md:p-8">
       <div className="mb-6 flex items-center gap-4">
         <Avatar profile={profile} />
         <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-brand-navy dark:text-white">
+          <p className="truncate font-display text-[1.6rem] leading-tight text-brand-navy dark:text-white">
             {profile.name}
           </p>
           <p className="truncate text-sm text-gray-500 dark:text-gray-400">

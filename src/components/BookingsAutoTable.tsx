@@ -6,6 +6,7 @@ import type { BookingRef } from "@/lib/api";
 import { postJson } from "@/lib/api-client";
 import { timeoutSignal } from "@/lib/timeout-signal";
 import { useRoomNames } from "@/lib/use-room-names";
+import PaymentBadge from "@/components/payments/PaymentBadge";
 
 interface BookingsAutoTableProps {
   hotelId: string;
@@ -197,6 +198,7 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
                 <th scope="col" className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-300">Habitación</th>
                 <th scope="col" className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-300">Estadía</th>
                 <th scope="col" className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-300">Estado</th>
+                <th scope="col" className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-300">Pago</th>
                 <th scope="col" className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-300">Canal</th>
                 <th scope="col" className="px-4 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-300">Acciones</th>
               </tr>
@@ -211,6 +213,13 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
                     <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadge(b.status)}`}>
                       {b.status}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2">
+                    {b.status === "cancelled" ? (
+                      <span className="text-xs text-gray-400">—</span>
+                    ) : (
+                      <PaymentBadge size="sm" status={b.payment_status} preference={b.payment_method_preference} />
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2">{b.channel}</td>
                   <td className="whitespace-nowrap px-4 py-2">

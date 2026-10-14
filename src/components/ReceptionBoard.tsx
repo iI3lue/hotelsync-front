@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BookingRef, PhysicalRoom } from "@/lib/api";
-import { fetchPhysicalRooms, postJson } from "@/lib/api-client";
+import { fetchPaymentStatusForStaff, fetchPhysicalRooms, postJson } from "@/lib/api-client";
+import PaymentBadge from "@/components/payments/PaymentBadge";
+import RegisterPaymentModal from "@/components/payments/RegisterPaymentModal";
 import { timeoutSignal } from "@/lib/timeout-signal";
 import { useRoomNames } from "@/lib/use-room-names";
 
@@ -23,6 +25,11 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
   const [notice, setNotice] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<PhysicalRoom[]>([]);
   const roomNames = useRoomNames(hotelId);
+  // Estado de cobro por reserva. payment-service es la fuente de verdad:
+  // booking-service puede tardar unos segundos en procesar el evento.
+  const [paid, setPaid] = useState<Record<string, "PAID" | "PENDING">>({});
+  const [paying, setPaying] = useState<BookingRef | null>(null);
+  const [checkoutWarned, setCheckoutWarned] = useState<string | null>(null);
 
   const load = useCallback(
     async (silent = false) => {
@@ -37,7 +44,19 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.message || `Error ${res.status}`);
         }
-        setArrivals(await res.json());
+        const list: BookingRef[] = await res.json();
+        setArrivals(list);
+        setPaid(Object.fromEntries(list.map((b) => [b.booking_id, b.payment_status === "PAID" ? "PAID" : "PENDING"])));
+        // Refina solo las que figuran pendientes (pueden haberse pagado en línea).
+        void Promise.allSettled(
+          list
+            .filter((b) => b.payment_status !== "PAID")
+            .map((b) => fetchPaymentStatusForStaff(b.booking_id))
+        ).then((results) => {
+          const updates: Record<string, "PAID" | "PENDING"> = {};
+          for (const r of results) if (r.status === "fulfilled") updates[r.value.booking_id] = r.value.payment_status;
+          if (Object.keys(updates).length) setPaid((prev) => ({ ...prev, ...updates }));
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudieron cargar las llegadas");
       } finally {
@@ -81,6 +100,14 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
   };
 
   const handleCheckOut = async (bookingId: string) => {
+    // Saldo pendiente: primer clic avisa, segundo confirma el check-out.
+    if (paid[bookingId] !== "PAID" && checkoutWarned !== bookingId) {
+      setCheckoutWarned(bookingId);
+      setNotice(null);
+      setError("Esta reserva tiene saldo pendiente. Registrá el pago o presioná Check-out otra vez para continuar igual.");
+      return;
+    }
+    setCheckoutWarned(null);
     setBusy(bookingId);
     setError(null);
     try {
@@ -177,12 +204,13 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display font-semibold text-brand-navy dark:text-white">
+                      <span className="font-display text-[1.15rem] text-brand-navy dark:text-white">
                         {b.guest_name || "Huésped sin registrar"}
                       </span>
-                      <span className="rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                        {b.status}
+                      <span className="rounded-full border border-brand-navy/15 px-2 py-0.5 text-[0.625rem] font-medium uppercase tracking-[0.12em] text-brand-navy/70 dark:border-white/20 dark:text-white/70">
+                        {b.status === "confirmed" ? "Confirmada" : b.status === "pending" ? "Pendiente" : b.status}
                       </span>
+                      <PaymentBadge size="sm" status={paid[b.booking_id] ?? b.payment_status} preference={b.payment_method_preference} />
                       <span className="font-mono text-xs text-gray-400">
                         ID: {b.booking_id.slice(0, 8)}…
                       </span>
@@ -244,6 +272,16 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
                       )}
                     </button>
 
+                    {paid[b.booking_id] !== "PAID" && (
+                      <button
+                        type="button"
+                        onClick={() => setPaying(b)}
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-500/60 bg-amber-50 px-3.5 text-sm font-semibold text-amber-900 transition-all hover:bg-amber-100 active:scale-95 dark:border-amber-400/40 dark:bg-amber-950/40 dark:text-amber-100"
+                      >
+                        Registrar pago
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => handleCheckOut(b.booking_id)}
@@ -258,6 +296,20 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
             ))}
           </ul>
         </div>
+      )}
+
+      {paying && (
+        <RegisterPaymentModal
+          booking={paying}
+          onClose={() => setPaying(null)}
+          onPaid={(tx) => {
+            setPaid((prev) => ({ ...prev, [tx.booking_id]: "PAID" }));
+            setPaying(null);
+            setError(null);
+            setCheckoutWarned(null);
+            setNotice(`Pago registrado: reserva ${tx.booking_id.slice(0, 8)}… (${tx.method === "CREDIT_CARD" ? "pagada en línea" : "cobrada en recepción"})`);
+          }}
+        />
       )}
     </div>
   );

@@ -55,7 +55,7 @@ export default async function NuevaReservaPage({
         ]}
         eyebrow={hotelData ? `${hotelData.name} · ${hotelData.city}` : "Reserva directa"}
         title={ready && roomType ? "Completá tu reserva" : hotel ? "Elegí tu habitación" : "Empecemos por el hotel"}
-        lead="Confirmación inmediata y sin sobreventa: si la ves libre, es tuya."
+        lead="Pagá ahora con tarjeta o al llegar al hotel. Si la ves libre, es tuya."
       />
 
       <div className="shell">

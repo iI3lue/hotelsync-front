@@ -36,6 +36,11 @@ const nextConfig = {
       {
         source: "/api/loyalty/:path*",
         destination: `${process.env.NEXT_PUBLIC_LOYALTY_API_URL || "http://localhost:3009/v1"}/:path*`,
+      },
+      {
+        // payment-service (pasarela simulada). Mismo patrón que loyalty.
+        source: "/api/payments/:path*",
+        destination: `${process.env.NEXT_PUBLIC_PAYMENT_API_URL || "http://localhost:3010/v1"}/:path*`,
       }
     ];
   },

@@ -7,6 +7,7 @@ import { fetchMyBookings } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
 import { formatDate, formatPrice } from "@/lib/format";
 import EmptyState from "@/components/EmptyState";
+import PaymentBadge from "@/components/payments/PaymentBadge";
 
 const STATUS_BADGES: Record<string, { label: string; class: string }> = {
   confirmed: {
@@ -107,6 +108,9 @@ export default function MyBookings() {
                 <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.12em] ${badge.class}`}>
                   {badge.label}
                 </span>
+                {b.status !== "cancelled" && (
+                  <PaymentBadge status={b.payment_status} preference={b.payment_method_preference} />
+                )}
                 <span className="font-mono text-[0.75rem] uppercase tracking-wider text-brand-navy/45 dark:text-white/40">
                   Reserva {b.booking_id.slice(0, 8)}
                 </span>
@@ -124,7 +128,9 @@ export default function MyBookings() {
               )}
             </div>
             <div className="sm:text-right">
-              <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/45">Total</span>
+              <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/45">
+                {b.payment_status === "PAID" ? "Total pagado" : "Total"}
+              </span>
               <span className="font-display text-[1.75rem] tabular-nums text-brand-navy dark:text-white">
                 {formatPrice(b.total_amount)}
               </span>

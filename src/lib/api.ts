@@ -93,7 +93,14 @@ export interface Booking {
   status: "pending" | "confirmed" | "cancelled";
   channel: "direct" | "ota" | "phone";
   total_amount: number | string;
+  /** Estado del cobro, independiente de `status` (payment-service). */
+  payment_status?: PaymentStatus;
+  payment_method_preference?: PaymentMethodPreference;
+  paid_at?: string | null;
 }
+
+export type PaymentStatus = "PENDING" | "PAID";
+export type PaymentMethodPreference = "ONLINE" | "RECEPTION";
 
 /** Respuesta del alta: incluye el manage token una sola vez. */
 export interface BookingCreated extends Booking {

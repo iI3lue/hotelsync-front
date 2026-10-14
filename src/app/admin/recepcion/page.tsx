@@ -90,10 +90,10 @@ export default async function RecepcionPage({
     <div className="mx-auto w-full max-w-7xl px-4 py-4">
       <div className="mb-6 space-y-1">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-brand-navy dark:text-white sm:text-3xl">
+          <h1 className="font-display text-display-sm text-brand-navy dark:text-white">
             Recepción y Check-in
           </h1>
-          <span className="rounded-full bg-brand-gold/15 px-2.5 py-0.5 text-xs font-semibold text-brand-gold">
+          <span className="rounded-full border border-brand-gold/50 px-2.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-[0.14em] text-brand-gold">
             Front Desk
           </span>
         </div>
@@ -212,7 +212,7 @@ export default async function RecepcionPage({
               aria-selected={activeTab === "reservas"}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all touch-manipulation ${
                 activeTab === "reservas"
-                  ? "bg-brand-gold text-brand-navy shadow-xs"
+                  ? "bg-brand-navy text-white dark:bg-white dark:text-brand-navy"
                   : "border border-gray-200/80 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-brand-navy-800 dark:text-gray-300 dark:hover:bg-white/5"
               }`}
             >
@@ -227,7 +227,7 @@ export default async function RecepcionPage({
               aria-selected={activeTab === "llegadas"}
               className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all touch-manipulation ${
                 activeTab === "llegadas"
-                  ? "bg-brand-gold text-brand-navy shadow-xs"
+                  ? "bg-brand-navy text-white dark:bg-white dark:text-brand-navy"
                   : "border border-gray-200/80 bg-white text-gray-700 hover:bg-gray-50 dark:border-white/10 dark:bg-brand-navy-800 dark:text-gray-300 dark:hover:bg-white/5"
               }`}
             >

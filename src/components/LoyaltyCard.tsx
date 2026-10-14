@@ -13,9 +13,9 @@ import Spinner from "@/components/Spinner";
 import { useToast } from "@/components/Toast";
 
 const TIER_COLORS: Record<string, string> = {
-  silver: "bg-slate-200 text-slate-800 border-slate-300",
-  gold: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  platinum: "bg-indigo-100 text-indigo-800 border-indigo-300",
+  silver: "border-brand-navy/25 text-brand-navy/70 dark:border-white/30 dark:text-white/70",
+  gold: "border-brand-gold text-brand-gold",
+  platinum: "border-brand-navy bg-brand-navy text-white dark:border-white dark:bg-white dark:text-brand-navy",
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -130,18 +130,18 @@ export function LoyaltyCard() {
       : Math.min(100, (account.points_balance / tierInfo.min) * 100);
 
   return (
-    <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-      <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+    <div className="overflow-hidden border border-brand-navy/10 bg-white dark:border-white/10 dark:bg-brand-navy-800">
+      <div className="p-6 border-b border-brand-navy/10 dark:border-white/10 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+          <h2 className="font-display text-[1.6rem] leading-tight text-brand-navy dark:text-white">
             Mi Fidelización
           </h2>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-brand-navy/55 dark:text-white/50">
             Acumula puntos con cada estadía
           </p>
         </div>
         <span
-          className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${TIER_COLORS[account.tier]}`}
+          className={`px-3 py-1 rounded-full border text-[0.6875rem] font-medium uppercase tracking-[0.14em] ${TIER_COLORS[account.tier]}`}
         >
           {TIER_LABELS[account.tier] ?? account.tier}
         </span>
@@ -149,20 +149,20 @@ export function LoyaltyCard() {
 
       <div className="p-6 space-y-8">
         <div>
-          <p className="text-4xl font-bold text-zinc-900 dark:text-zinc-100">
+          <p className="font-display text-[3rem] leading-none tabular-nums text-brand-navy dark:text-white">
             {account.points_balance.toLocaleString()}{" "}
-            <span className="text-lg text-zinc-500 font-medium">pts</span>
+            <span className="ml-1 font-sans text-base text-brand-navy/50 dark:text-white/45">pts</span>
           </p>
 
           {account.tier !== "platinum" && (
             <div className="mt-4">
-              <div className="flex justify-between text-xs text-zinc-500 mb-1">
+              <div className="flex justify-between text-xs text-brand-navy/55 dark:text-white/50 mb-1">
                 <span>Progreso hacia {tierInfo.name}</span>
                 <span>{tierInfo.min.toLocaleString()} pts</span>
               </div>
-              <div className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full h-2.5">
+              <div className="h-1 w-full bg-brand-stone dark:bg-white/10">
                 <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
+                  className="h-1 bg-brand-gold transition-all duration-700 ease-silk"
                   style={{ width: `${progress}%` }}
                 ></div>
               </div>
@@ -172,10 +172,10 @@ export function LoyaltyCard() {
 
         {levels.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+            <h3 className="eyebrow mb-4">
               Niveles
             </h3>
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+            <ul className="divide-y divide-brand-navy/10 dark:divide-white/10 border border-brand-navy/10 dark:border-white/10 overflow-hidden">
               {levels.map((level) => {
                 const isCurrent = level.name === account.tier;
                 return (
@@ -183,14 +183,14 @@ export function LoyaltyCard() {
                     key={level.name}
                     className={`flex items-center justify-between px-4 py-2.5 text-sm ${
                       isCurrent
-                        ? "bg-blue-50 dark:bg-blue-950/30 font-semibold text-zinc-900 dark:text-zinc-100"
-                        : "text-zinc-600 dark:text-zinc-400"
+                        ? "bg-brand-paper text-brand-navy dark:bg-white/5 dark:text-white"
+                        : "text-brand-navy/70 dark:text-white/65"
                     }`}
                   >
                     <span>
                       {TIER_LABELS[level.name] ?? level.name}
                       {isCurrent && (
-                        <span className="ml-2 text-xs font-normal text-blue-600 dark:text-blue-300">
+                        <span className="ml-2 text-eyebrow uppercase text-brand-gold">
                           Tu nivel
                         </span>
                       )}
@@ -207,7 +207,7 @@ export function LoyaltyCard() {
         )}
 
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+          <h3 className="eyebrow mb-4">
             Canjear puntos
           </h3>
           {redeemError && (
@@ -258,11 +258,11 @@ export function LoyaltyCard() {
         </div>
 
         <div>
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">
+          <h3 className="eyebrow mb-4">
             Actividad Reciente
           </h3>
           {recent_transactions.length === 0 ? (
-            <p className="text-sm text-zinc-500 italic">
+            <p className="text-sm text-brand-navy/55 dark:text-white/50 italic">
               No hay transacciones aún.
             </p>
           ) : (
@@ -272,12 +272,12 @@ export function LoyaltyCard() {
                   key={tx.transaction_id}
                   className="flex justify-between items-center text-sm"
                 >
-                  <span className="text-zinc-600 dark:text-zinc-400">
+                  <span className="text-brand-navy/70 dark:text-white/65">
                     {tx.reason}
                   </span>
                   <span
                     className={`font-medium ${
-                      tx.type === "earn" ? "text-green-600" : "text-red-600"
+                      tx.type === "earn" ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"
                     }`}
                   >
                     {tx.type === "earn" ? "+" : "-"}
