@@ -69,6 +69,19 @@ export function resolveViewedRole(
   return realRole ?? "GUEST";
 }
 
+/**
+ * Vista simulada EFECTIVA: solo un SUPER_ADMIN real puede simular. Para
+ * cualquier otro rol (o sin sesión) la preferencia guardada se ignora, para
+ * que un valor viejo en el navegador no pinte el banner a quien no es admin.
+ * Misma regla que `resolveViewedRole`, pero sobre la preferencia cruda.
+ */
+export function effectiveViewAs(
+  realRole: string | null,
+  stored: ViewAsRole | null
+): ViewAsRole | null {
+  return realRole === "SUPER_ADMIN" ? stored : null;
+}
+
 /** Secciones del admin visibles para cada vista (solo renderizado). */
 export function adminSectionsFor(
   viewedRole: string
@@ -113,13 +126,13 @@ export function useViewAs(realRole: string | null): {
   viewedRole: ViewAsRole | string;
   setViewAs: (role: ViewAsRole | null) => void;
 } {
-  const [viewAs, setViewAsState] = useState<ViewAsRole | null>(null);
+  const [stored, setStored] = useState<ViewAsRole | null>(null);
 
   useEffect(() => {
-    setViewAsState(readViewAs());
-    const onChange = () => setViewAsState(readViewAs());
+    setStored(readViewAs());
+    const onChange = () => setStored(readViewAs());
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) setViewAsState(readViewAs());
+      if (e.key === STORAGE_KEY) setStored(readViewAs());
     };
     window.addEventListener(CHANGE_EVENT, onChange);
     window.addEventListener("storage", onStorage);
@@ -131,8 +144,11 @@ export function useViewAs(realRole: string | null): {
 
   const setViewAs = useCallback((role: ViewAsRole | null) => {
     writeViewAs(role);
-    setViewAsState(role);
+    setStored(role);
   }, []);
+
+  // GATE: la preferencia guardada solo cuenta para un SUPER_ADMIN real.
+  const viewAs = effectiveViewAs(realRole, stored);
 
   return { viewAs, viewedRole: resolveViewedRole(realRole, viewAs), setViewAs };
 }

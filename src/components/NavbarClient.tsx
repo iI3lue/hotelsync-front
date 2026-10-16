@@ -6,6 +6,7 @@ import Link from "next/link";
 import { logout, me, type AuthProfile } from "@/lib/auth-client";
 import {
   useViewAs,
+  writeViewAs,
   type ViewAsRole,
   VIEW_AS_LABELS,
 } from "@/lib/view-as";
@@ -102,6 +103,10 @@ export default function NavbarClient() {
   const [hidden, setHidden] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { viewAs, viewedRole, setViewAs } = useViewAs(profile?.role ?? null);
+
+  // El banner y su espaciador solo existen para un SUPER_ADMIN real simulando
+  // (además del gate de `useViewAs`, por si algún consumidor usa `viewAs` suelto).
+  const isSimulating = viewAs !== null && profile?.role === "SUPER_ADMIN";
 
   const immersive = hasImmersiveHero(pathname);
   const overlay = immersive && atTop && !mobileOpen;
@@ -216,6 +221,9 @@ export default function NavbarClient() {
 
   async function handleLogout() {
     await logout();
+    // La preferencia de "ver como" no debe sobrevivir a la sesión: en un
+    // dispositivo compartido el siguiente usuario vería el banner.
+    writeViewAs(null);
     setProfile(null);
     router.push("/");
     router.refresh();
@@ -317,7 +325,7 @@ export default function NavbarClient() {
           </div>
         </div>
 
-        {viewAs && !mobileOpen && (
+        {isSimulating && !mobileOpen && (
           <ViewingAsBanner viewAs={viewAs} onExit={() => handleSelectRole(null)} />
         )}
       </header>
@@ -375,7 +383,7 @@ export default function NavbarClient() {
       </div>
 
       {/* Espaciador en páginas sin hero inmersivo */}
-      {!immersive && <div aria-hidden="true" className={viewAs ? "h-[calc(var(--header-h)+34px)]" : "h-[var(--header-h)]"} />}
+      {!immersive && <div aria-hidden="true" className={isSimulating ? "h-[calc(var(--header-h)+34px)]" : "h-[var(--header-h)]"} />}
     </>
   );
 }
