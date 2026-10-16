@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { timeoutSignal } from "./timeout-signal";
 import type {
   HotelFilters,
   SearchState,
@@ -12,6 +13,11 @@ import type {
  * Usa URLs directas al backend + `cache` de React. Los Client Components
  * deben usar `@/lib/api-client` (rewrites /api/*) y `@/lib/format`
  * (helpers puros); importar este módulo en el browser rompe el bundle.
+ *
+ * Todo request lleva timeout (`API_TIMEOUT_MS`). Sin él, un RSC que espera a
+ * un servicio Render free dormido se cuelga hasta que la plataforma corta la
+ * función (504, página en blanco); con él, el `catch` del caller degrada
+ * antes de ese corte.
  */
 export type { HotelFilters, SearchState, StayAvailability, StayInfo, StockLookup };
 export {
@@ -34,6 +40,22 @@ const PROPERTY_API = process.env.NEXT_PUBLIC_PROPERTY_API_URL || "http://localho
 const RATE_API = process.env.NEXT_PUBLIC_RATE_API_URL || "http://localhost:3002/v1";
 const BOOKING_API = process.env.NEXT_PUBLIC_BOOKING_API_URL || "http://localhost:3004/v1";
 const FRONT_DESK_API = process.env.NEXT_PUBLIC_FRONT_DESK_API_URL || "http://localhost:3005/v1";
+
+/**
+ * Timeout por request server-side. Se mantiene por debajo del límite de
+ * duración de función de Vercel (10s por defecto en Hobby) para que nuestro
+ * corte llegue ANTES que el de la plataforma. Overridable por env si el plan
+ * permite funciones más largas.
+ */
+const API_TIMEOUT_MS = Number(process.env.API_FETCH_TIMEOUT_MS) || 8000;
+
+/**
+ * `fetch` server-side con timeout. No reintenta: en SSR un reintento duplica
+ * la espera y puede pasarse del límite de la función; el caller degrada.
+ */
+function timedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(url, { ...init, signal: timeoutSignal(API_TIMEOUT_MS) });
+}
 
 export interface Hotel {
   hotel_id: string;
@@ -132,7 +154,7 @@ export interface GuestIncident {
 }
 
 async function apiFetch<T>(url: string): Promise<T> {
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await timedFetch(url, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);
   }
@@ -140,7 +162,7 @@ async function apiFetch<T>(url: string): Promise<T> {
 }
 
 async function apiPost<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await timedFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -153,7 +175,7 @@ async function apiPost<T>(url: string, body: unknown): Promise<T> {
 }
 
 async function apiPut<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, {
+  const res = await timedFetch(url, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
