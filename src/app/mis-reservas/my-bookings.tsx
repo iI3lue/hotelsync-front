@@ -6,8 +6,10 @@ import type { Booking } from "@/lib/api";
 import { fetchMyBookings } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
 import { formatDate, formatPrice } from "@/lib/format";
+import { canPayOnline } from "@/lib/payment-eligibility";
 import EmptyState from "@/components/EmptyState";
 import PaymentBadge from "@/components/payments/PaymentBadge";
+import PayOnlineModal from "@/components/payments/PayOnlineModal";
 
 const STATUS_BADGES: Record<string, { label: string; class: string }> = {
   confirmed: {
@@ -31,6 +33,8 @@ const STATUS_BADGES: Record<string, { label: string; class: string }> = {
 export default function MyBookings() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [paying, setPaying] = useState<Booking | null>(null);
 
   useEffect(() => {
     me().then((profile) => {
@@ -38,6 +42,7 @@ export default function MyBookings() {
         setError("Iniciá sesión para ver tus reservas y gestionar tus estadías.");
         return;
       }
+      setUserId(profile.user_id);
       fetchMyBookings()
         .then(setBookings)
         .catch((err: unknown) =>
@@ -45,6 +50,17 @@ export default function MyBookings() {
         );
     });
   }, []);
+
+  function handlePaid(bookingId: string) {
+    setBookings((prev) =>
+      prev ? prev.map((b) => (b.booking_id === bookingId ? { ...b, payment_status: "PAID" } : b)) : prev
+    );
+    setPaying(null);
+    // La confirmación llega por evento (`payment.completed`); reconciliamos luego.
+    window.setTimeout(() => {
+      fetchMyBookings().then(setBookings).catch(() => {});
+    }, 2500);
+  }
 
   if (error) {
     return (
@@ -85,59 +101,78 @@ export default function MyBookings() {
   }
 
   return (
-    <ul className="divide-y divide-brand-navy/10 border-y border-brand-navy/10 dark:divide-white/10 dark:border-white/10">
-      {bookings.map((b, i) => {
-        const badge = STATUS_BADGES[b.status.toLowerCase()] ?? {
-          label: b.status,
-          class: "border-slate-200 bg-slate-100 text-slate-700",
-        };
-        const nights = Math.max(
-          0,
-          Math.round((Date.parse(`${b.check_out}T12:00:00`) - Date.parse(`${b.check_in}T12:00:00`)) / 86_400_000)
-        );
+    <>
+      <ul className="divide-y divide-brand-navy/10 border-y border-brand-navy/10 dark:divide-white/10 dark:border-white/10">
+        {bookings.map((b, i) => {
+          const badge = STATUS_BADGES[b.status.toLowerCase()] ?? {
+            label: b.status,
+            class: "border-slate-200 bg-slate-100 text-slate-700",
+          };
+          const nights = Math.max(
+            0,
+            Math.round((Date.parse(`${b.check_out}T12:00:00`) - Date.parse(`${b.check_in}T12:00:00`)) / 86_400_000)
+          );
 
-        return (
-          <li
-            key={b.booking_id}
-            data-reveal=""
-            style={{ ["--reveal-delay" as string]: `${Math.min(i, 5) * 60}ms` }}
-            className="grid gap-4 py-8 sm:grid-cols-[1fr_auto] sm:items-center"
-          >
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.12em] ${badge.class}`}>
-                  {badge.label}
-                </span>
-                {b.status !== "cancelled" && (
-                  <PaymentBadge status={b.payment_status} preference={b.payment_method_preference} />
-                )}
-                <span className="font-mono text-[0.75rem] uppercase tracking-wider text-brand-navy/45 dark:text-white/40">
-                  Reserva {b.booking_id.slice(0, 8)}
-                </span>
-              </div>
-              <p className="mt-4 font-display text-[1.75rem] leading-tight text-brand-navy dark:text-white">
-                {formatDate(b.check_in)}
-                <span aria-hidden="true" className="mx-3 inline-block h-px w-8 translate-y-[-0.3em] bg-current opacity-30" />
-                <span className="sr-only"> a </span>
-                {formatDate(b.check_out)}
-              </p>
-              {nights > 0 && (
-                <p className="mt-1 text-[0.875rem] text-brand-navy/55 dark:text-white/50">
-                  {nights} {nights === 1 ? "noche" : "noches"}
+          return (
+            <li
+              key={b.booking_id}
+              data-reveal=""
+              style={{ ["--reveal-delay" as string]: `${Math.min(i, 5) * 60}ms` }}
+              className="grid gap-4 py-8 sm:grid-cols-[1fr_auto] sm:items-center"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.12em] ${badge.class}`}>
+                    {badge.label}
+                  </span>
+                  {b.status !== "cancelled" && (
+                    <PaymentBadge status={b.payment_status} preference={b.payment_method_preference} />
+                  )}
+                  <span className="font-mono text-[0.75rem] uppercase tracking-wider text-brand-navy/45 dark:text-white/40">
+                    Reserva {b.booking_id.slice(0, 8)}
+                  </span>
+                </div>
+                <p className="mt-4 font-display text-[1.75rem] leading-tight text-brand-navy dark:text-white">
+                  {formatDate(b.check_in)}
+                  <span aria-hidden="true" className="mx-3 inline-block h-px w-8 translate-y-[-0.3em] bg-current opacity-30" />
+                  <span className="sr-only"> a </span>
+                  {formatDate(b.check_out)}
                 </p>
-              )}
-            </div>
-            <div className="sm:text-right">
-              <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/45">
-                {b.payment_status === "PAID" ? "Total pagado" : "Total"}
-              </span>
-              <span className="font-display text-[1.75rem] tabular-nums text-brand-navy dark:text-white">
-                {formatPrice(b.total_amount)}
-              </span>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+                {nights > 0 && (
+                  <p className="mt-1 text-[0.875rem] text-brand-navy/55 dark:text-white/50">
+                    {nights} {nights === 1 ? "noche" : "noches"}
+                  </p>
+                )}
+              </div>
+              <div className="sm:text-right">
+                <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/45">
+                  {b.payment_status === "PAID" ? "Total pagado" : "Total"}
+                </span>
+                <span className="font-display text-[1.75rem] tabular-nums text-brand-navy dark:text-white">
+                  {formatPrice(b.total_amount)}
+                </span>
+                {canPayOnline(b, userId) && (
+                  <button
+                    type="button"
+                    onClick={() => setPaying(b)}
+                    className="btn-primary mt-4 w-full sm:w-auto"
+                  >
+                    Pagar ahora
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {paying && (
+        <PayOnlineModal
+          booking={paying}
+          onClose={() => setPaying(null)}
+          onPaid={() => handlePaid(paying.booking_id)}
+        />
+      )}
+    </>
   );
 }
