@@ -8,6 +8,7 @@ import RevealObserver from "@/components/ui/RevealObserver";
 import ThemeProvider from "@/components/ThemeProvider";
 import NavbarClient from "@/components/NavbarClient";
 import LoginToast from "@/components/LoginToast";
+import WarmUp from "@/components/WarmUp";
 import { ToastProvider } from "@/components/Toast";
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NavbarClient />
 
           <RevealObserver />
+          <WarmUp />
           <main id="contenido" className="min-h-[70vh]">
             {children}
           </main>
