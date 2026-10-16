@@ -159,8 +159,13 @@ export function withSearch(
   return qs ? `${path}?${qs}` : path;
 }
 
+/** Normaliza a `YYYY-MM-DD`: acepta fecha suelta o datetime ISO. */
+function toDateOnly(value: string): string {
+  return value.slice(0, 10);
+}
+
 function isoToLocalDate(iso: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(toDateOnly(iso));
   if (!m) return null;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -446,15 +451,15 @@ export function formatPrice(value: number | string): string {
 }
 
 export function formatDate(dateIso: string): string {
-  try {
-    return new Intl.DateTimeFormat("es-CO", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(`${dateIso}T12:00:00`));
-  } catch {
-    return dateIso;
-  }
+  // El listado de reservas entrega `check_in` como datetime ISO
+  // (`2026-11-10T00:00:00.000Z`); la normalización vive en isoToLocalDate.
+  const d = isoToLocalDate(dateIso);
+  if (!d) return dateIso;
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(d);
 }
 
 export function minRate(hotel: Hotel): number | null {

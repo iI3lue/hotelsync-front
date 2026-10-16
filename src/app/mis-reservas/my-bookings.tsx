@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Booking } from "@/lib/api";
 import { fetchMyBookings } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDate, formatPrice, stayNights } from "@/lib/format";
 import { canPayOnline } from "@/lib/payment-eligibility";
 import EmptyState from "@/components/EmptyState";
 import PaymentBadge from "@/components/payments/PaymentBadge";
@@ -108,10 +108,7 @@ export default function MyBookings() {
             label: b.status,
             class: "border-slate-200 bg-slate-100 text-slate-700",
           };
-          const nights = Math.max(
-            0,
-            Math.round((Date.parse(`${b.check_out}T12:00:00`) - Date.parse(`${b.check_in}T12:00:00`)) / 86_400_000)
-          );
+        const nights = stayNights(b.check_in, b.check_out).length;
 
           return (
             <li

@@ -1,6 +1,7 @@
 import {
   applyStayAvailability,
   filterHotels,
+  formatDate,
   hotelStayAvailability,
   searchQuery,
   stayNights,
@@ -66,6 +67,29 @@ describe("stayNights", () => {
     expect(stayNights("2026-10-04", "2026-10-01")).toEqual([]);
     expect(stayNights("2026-10-04", "2026-10-04")).toEqual([]);
     expect(stayNights("no-fecha", "2026-10-04")).toEqual([]);
+  });
+
+  it("acepta datetime ISO (como lo devuelve el listado de reservas)", () => {
+    expect(
+      stayNights("2026-11-10T00:00:00.000Z", "2026-11-12T00:00:00.000Z")
+    ).toEqual(["2026-11-10", "2026-11-11"]);
+  });
+});
+
+describe("formatDate", () => {
+  it("formatea una fecha suelta", () => {
+    const out = formatDate("2026-11-10");
+    expect(out).toContain("2026");
+    expect(out).not.toContain("T");
+  });
+
+  it("no devuelve el string crudo cuando llega un datetime ISO", () => {
+    expect(formatDate("2026-11-10T00:00:00.000Z")).toBe(formatDate("2026-11-10"));
+    expect(formatDate("2026-11-10T00:00:00.000Z")).not.toContain("T00:00");
+  });
+
+  it("devuelve el input tal cual si no es una fecha parseable", () => {
+    expect(formatDate("no-fecha")).toBe("no-fecha");
   });
 });
 
