@@ -144,7 +144,7 @@ export default function MyBookings() {
                   </p>
                 )}
               </div>
-              <div className="sm:text-right">
+              <div className="flex flex-col sm:items-end">
                 <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/45">
                   {b.payment_status === "PAID" ? "Total pagado" : "Total"}
                 </span>
