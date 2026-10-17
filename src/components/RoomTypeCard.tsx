@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { RoomType, SearchState } from "@/lib/api";
-import { formatPrice, withSearch } from "@/lib/api";
+import { withSearch } from "@/lib/api";
+import Money from "@/components/Money";
 import { me, type AuthProfile } from "@/lib/auth-client";
 import { updateRoomType } from "@/lib/api-client";
 import { roomImage } from "@/lib/imagery";
@@ -152,7 +153,7 @@ export default function RoomTypeCard({ roomType, search, index = 0 }: RoomTypeCa
         <div className="mt-9 flex items-end justify-between gap-6 border-t border-brand-navy/12 pt-6 dark:border-white/12">
           <p className="leading-tight text-brand-navy dark:text-white">
             <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/50">Desde</span>
-            <span className="font-display text-[2rem] tabular-nums">{formatPrice(roomType.base_rate)}</span>
+            <span className="font-display text-[2rem] tabular-nums"><Money amountCOP={roomType.base_rate} /></span>
             <span className="ml-1.5 text-[0.85rem] text-brand-navy/50 dark:text-white/50">/ noche</span>
           </p>
         </div>

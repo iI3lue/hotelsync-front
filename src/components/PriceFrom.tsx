@@ -1,4 +1,4 @@
-import { formatPrice } from "@/lib/format";
+import Money from "@/components/Money";
 
 /**
  * Precio "desde" compartido: mismo bloque en cards y detalle.
@@ -19,7 +19,7 @@ export default function PriceFrom({
     <p className="leading-tight">
       <span className={`block text-eyebrow uppercase ${muted}`}>Desde</span>
       <span className={`tabular-nums ${size === "lg" ? "font-display text-[2.25rem]" : "text-[1.25rem] font-normal"}`}>
-        {formatPrice(rate)}
+        <Money amountCOP={rate} />
       </span>
       <span className={`ml-1.5 text-[0.8125rem] ${muted}`}>/ noche</span>
     </p>

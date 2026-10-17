@@ -5,7 +5,8 @@ import Link from "next/link";
 import type { Booking } from "@/lib/api";
 import { fetchMyBookings } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
-import { formatDate, formatPrice, stayNights } from "@/lib/format";
+import { formatDate, stayNights } from "@/lib/format";
+import Money from "@/components/Money";
 import { canPayOnline } from "@/lib/payment-eligibility";
 import EmptyState from "@/components/EmptyState";
 import PaymentBadge from "@/components/payments/PaymentBadge";
@@ -146,7 +147,7 @@ export default function MyBookings() {
                   {b.payment_status === "PAID" ? "Total pagado" : "Total"}
                 </span>
                 <span className="font-display text-[1.75rem] tabular-nums text-brand-navy dark:text-white">
-                  {formatPrice(b.total_amount)}
+                  <Money amountCOP={b.total_amount} />
                 </span>
                 {canPayOnline(b, userId) && (
                   <button

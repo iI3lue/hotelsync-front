@@ -6,6 +6,7 @@ import "./globals.css";
 import SiteFooter from "@/components/SiteFooter";
 import RevealObserver from "@/components/ui/RevealObserver";
 import ThemeProvider from "@/components/ThemeProvider";
+import { CurrencyProvider } from "@/components/CurrencyProvider";
 import NavbarClient from "@/components/NavbarClient";
 import LoginToast from "@/components/LoginToast";
 import WarmUp from "@/components/WarmUp";
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
 
         <ThemeProvider>
+          <CurrencyProvider>
           <ToastProvider>
           <NavbarClient />
 
@@ -56,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           <SiteFooter />
           </ToastProvider>
+          </CurrencyProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -4,12 +4,12 @@ import { useEffect, useState, useTransition } from "react";
 import useSWR from "swr";
 import {
   formatDate,
-  formatPrice,
   withSearch,
   type Availability,
   type RoomType,
   type SearchState,
 } from "@/lib/api";
+import Money from "@/components/Money";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import Spinner from "@/components/Spinner";
 import { me, type AuthProfile } from "@/lib/auth-client";
@@ -178,7 +178,7 @@ export default function AvailabilityForm({
             )}
             <p className="mt-6 border-t border-brand-navy/12 pt-5 text-brand-navy dark:border-white/12 dark:text-white">
               <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/50">Desde</span>
-              <span className="font-display text-[2rem] tabular-nums">{formatPrice(selectedRoom.base_rate)}</span>
+              <span className="font-display text-[2rem] tabular-nums"><Money amountCOP={selectedRoom.base_rate} /></span>
               <span className="ml-1.5 text-[0.85rem] text-brand-navy/50 dark:text-white/50">/ noche</span>
             </p>
           </div>
@@ -235,7 +235,7 @@ export default function AvailabilityForm({
                           </span>
                         </span>
                         <span className="shrink-0 tabular-nums text-[0.95rem] text-brand-navy/80 dark:text-white/75">
-                          {formatPrice(room.base_rate)} <span className="text-[0.75rem] text-brand-navy/45 dark:text-white/40">/ noche</span>
+                          <Money amountCOP={room.base_rate} /> <span className="text-[0.75rem] text-brand-navy/45 dark:text-white/40">/ noche</span>
                         </span>
                       </button>
                     </li>
@@ -294,7 +294,7 @@ export default function AvailabilityForm({
                     </h3>
                     {selectedRoom ? (
                       <p className="mt-1 text-[0.9rem] text-brand-navy/60 dark:text-white/55">
-                        {selectedRoom.name} · {formatPrice(selectedRoom.base_rate)} / noche
+                        {selectedRoom.name} · <Money amountCOP={selectedRoom.base_rate} /> / noche
                       </p>
                     ) : null}
                   </div>

@@ -3,13 +3,13 @@ import Link from "next/link";
 import {
   fetchHotelById,
   fetchRoomTypes,
-  formatPrice,
   withSearch,
   type SearchState,
 } from "@/lib/api";
 import { hotelImage, roomImage } from "@/lib/imagery";
 import { cityLine } from "@/lib/destinations";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import Money from "@/components/Money";
 import RoomTypeCard from "@/components/RoomTypeCard";
 import EmptyState from "@/components/EmptyState";
 import ParallaxImage from "@/components/ui/ParallaxImage";
@@ -125,7 +125,7 @@ export default async function HotelDetailPage({
               <div className="col-span-2 animate-slide-up lg:col-span-1 lg:text-right" style={{ animationDelay: "840ms" }}>
                 <p className="text-eyebrow uppercase text-white/55">Tarifa desde</p>
                 <p className="mt-1 font-display text-[2rem] leading-none tabular-nums">
-                  {formatPrice(from)} <span className="font-sans text-[0.85rem] text-white/60">/ noche</span>
+                  <Money amountCOP={from} /> <span className="font-sans text-[0.85rem] text-white/60">/ noche</span>
                 </p>
               </div>
             )}
@@ -295,7 +295,7 @@ export default async function HotelDetailPage({
           {from !== null ? (
             <p className="leading-tight text-brand-navy dark:text-white">
               <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/50">Desde</span>
-              <span className="tabular-nums">{formatPrice(from)}</span>
+              <span className="tabular-nums"><Money amountCOP={from} /></span>
               <span className="ml-1 text-xs text-brand-navy/50 dark:text-white/50">/ noche</span>
             </p>
           ) : (

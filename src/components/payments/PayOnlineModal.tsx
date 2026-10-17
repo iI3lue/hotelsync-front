@@ -15,7 +15,8 @@ import {
   type CardErrors,
   type CardFields,
 } from "@/lib/card";
-import { formatPrice } from "@/lib/format";
+import Money from "@/components/Money";
+import { useCurrency } from "@/components/CurrencyProvider";
 import CardForm from "@/components/payments/CardForm";
 import Spinner from "@/components/Spinner";
 
@@ -44,6 +45,7 @@ export default function PayOnlineModal({
   onClose: () => void;
   onPaid: (tx: PaymentTransaction) => void;
 }) {
+  const { formatMoney } = useCurrency();
   const [status, setStatus] = useState<PaymentStatusInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [card, setCard] = useState<CardFields>(EMPTY_CARD);
@@ -160,7 +162,7 @@ export default function PayOnlineModal({
 
         <div className="mt-6 flex items-baseline justify-between border-y border-brand-navy/10 py-4 dark:border-white/10">
           <span className="eyebrow">{alreadyPaid ? "Pagado" : "Total a pagar"}</span>
-          <span className="font-display text-[2rem] leading-none tabular-nums text-brand-navy dark:text-white">{formatPrice(amount)}</span>
+          <span className="font-display text-[2rem] leading-none tabular-nums text-brand-navy dark:text-white"><Money amountCOP={amount} /></span>
         </div>
 
         {loading ? (
@@ -184,7 +186,7 @@ export default function PayOnlineModal({
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button type="button" onClick={onClose} disabled={saving} className="btn-outline">Cancelar</button>
               <button type="submit" disabled={saving} className="btn-primary">
-                {saving ? <Spinner label="Procesando el pago…" /> : `Pagar ${formatPrice(amount)}`}
+                {saving ? <Spinner label="Procesando el pago…" /> : `Pagar ${formatMoney(amount)}`}
               </button>
             </div>
           </form>

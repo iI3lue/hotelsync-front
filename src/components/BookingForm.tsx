@@ -12,7 +12,7 @@ import {
   processWebPayment,
   type PaymentTransaction,
 } from "@/lib/api-client";
-import { formatDate, formatPrice } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { formatShort } from "@/lib/dates";
 import { firstNightWithoutStock, stayNights } from "@/lib/stay-range";
 import { roomImage } from "@/lib/imagery";
@@ -26,6 +26,7 @@ import {
   type CardFields,
 } from "@/lib/card";
 import RangeCalendar from "@/components/RangeCalendar";
+import Money from "@/components/Money";
 import Spinner from "@/components/Spinner";
 import CardForm from "@/components/payments/CardForm";
 import PaymentMethodPicker, { type PaymentChoice } from "@/components/payments/PaymentMethodPicker";
@@ -188,7 +189,7 @@ function BookingSuccess({
         <div className={row}>
           <dt className="eyebrow">{paid ? "Total pagado" : "Total a pagar"}</dt>
           <dd className="font-display text-[1.9rem] leading-none tabular-nums text-brand-navy dark:text-white">
-            {formatPrice(booking.total_amount)}
+            <Money amountCOP={booking.total_amount} />
           </dd>
         </div>
       </dl>
@@ -598,7 +599,7 @@ export default function BookingForm({
               <CardForm value={card} onChange={setCard} errors={cardErrors} disabled={saving} />
             ) : (
               <div className="border-l-2 border-brand-gold bg-brand-paper p-5 text-[0.9rem] leading-relaxed text-brand-navy/75 dark:bg-white/5 dark:text-white/70">
-                Reservamos tu habitación ahora y pagás <strong className="font-medium text-brand-navy dark:text-white">{total !== null ? formatPrice(total) : ""}</strong> en
+                Reservamos tu habitación ahora y pagás <strong className="font-medium text-brand-navy dark:text-white">{total !== null ? <Money amountCOP={total} /> : ""}</strong> en
                 recepción, con efectivo, tarjeta o transferencia. Las condiciones de cancelación están en la página del hotel.
               </div>
             )}
@@ -639,7 +640,7 @@ export default function BookingForm({
               {saving ? (
                 <Spinner label={savingLabel || "Procesando…"} />
               ) : method === "ONLINE" ? (
-                <>Pagar {total !== null ? formatPrice(total) : ""}</>
+                <>Pagar {total !== null ? <Money amountCOP={total} /> : ""}</>
               ) : (
                 "Confirmar reserva"
               )}
@@ -671,7 +672,7 @@ export default function BookingForm({
           </div>
           <div className="flex justify-between gap-4 py-3">
             <dt className="text-brand-navy/55 dark:text-white/50">Tarifa por noche</dt>
-            <dd className="tabular-nums text-brand-navy dark:text-white">{formatPrice(rate)}</dd>
+            <dd className="tabular-nums text-brand-navy dark:text-white"><Money amountCOP={rate} /></dd>
           </div>
           {step === 2 && (
             <div className="flex justify-between gap-4 py-3">
@@ -685,7 +686,7 @@ export default function BookingForm({
         <div className="flex items-baseline justify-between pt-5">
           <span className="eyebrow">Total</span>
           <span className="font-display text-[2.25rem] leading-none tabular-nums text-brand-navy dark:text-white">
-            {total !== null ? formatPrice(total) : "—"}
+            {total !== null ? <Money amountCOP={total} /> : "—"}
           </span>
         </div>
         {booking && (
