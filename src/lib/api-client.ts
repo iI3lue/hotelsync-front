@@ -637,3 +637,60 @@ export async function fetchCleaningTasks(
     `/api/housekeeping/tasks?hotel_id=${encodeURIComponent(hotelId)}`
   );
 }
+
+export interface AnalyticsOccupancyPoint {
+  hotel_id: string;
+  date: string;
+  available_nights: number;
+  occupied_nights: number;
+  occupancy: number;
+}
+
+export interface AnalyticsForecastPoint {
+  hotel_id: string;
+  date: string;
+  occupancy_expected: number;
+  adr_expected: number;
+  revpar_expected: number;
+}
+
+export interface AnalyticsDashboard {
+  hotel_id: string;
+  range: { from: string; to: string };
+  occupancy_avg: number;
+  adr_avg: number;
+  revpar_avg: number;
+  forecast: AnalyticsForecastPoint[];
+}
+
+/**
+ * Revenue management (analytics-service, vía rewrite /api/analytics).
+ * `to` es EXCLUSIVO, como el check-out: [from, to) cubre las noches hasta
+ * `to - 1`. Los montos (ADR/RevPAR) vienen en COP, como el resto del dominio.
+ */
+export async function fetchAnalyticsDashboard(
+  hotelId: string,
+  range: { from: string; to: string }
+): Promise<AnalyticsDashboard> {
+  const params = new URLSearchParams({ from: range.from, to: range.to });
+  const res = await clientFetch<{ data: AnalyticsDashboard }>(
+    `/api/analytics/dashboard/${encodeURIComponent(hotelId)}?${params}`
+  );
+  return res.data;
+}
+
+/** Serie diaria de ocupación del hotel en el rango [from, to). */
+export async function fetchAnalyticsOccupancy(
+  hotelId: string,
+  range: { from: string; to: string }
+): Promise<AnalyticsOccupancyPoint[]> {
+  const params = new URLSearchParams({
+    hotel_id: hotelId,
+    from: range.from,
+    to: range.to,
+  });
+  const res = await clientFetch<{ data: AnalyticsOccupancyPoint[] }>(
+    `/api/analytics/occupancy?${params}`
+  );
+  return res.data;
+}

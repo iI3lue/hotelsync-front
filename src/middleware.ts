@@ -69,7 +69,8 @@ function isAllowedAdminPath(role: string, pathname: string): boolean {
       return (
         pathname === "/admin" ||
         pathname.startsWith("/admin/hotels") ||
-        pathname.startsWith("/admin/staff")
+        pathname.startsWith("/admin/staff") ||
+        pathname.startsWith("/admin/analytics")
       );
     default:
       return false;

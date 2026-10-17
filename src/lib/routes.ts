@@ -9,6 +9,7 @@ export const ROUTES = {
   adminHotels: "/admin/hotels",
   adminReception: "/admin/recepcion",
   adminHousekeeping: "/admin/housekeeping",
+  adminAnalytics: "/admin/analytics",
 } as const;
 
 export function defaultRouteForRole(role: string): string {
@@ -47,6 +48,7 @@ export function isAllowedPathForRole(role: string, pathname: string): boolean {
       return (
         pathname === ROUTES.admin ||
         pathname.startsWith(ROUTES.adminHotels) ||
+        pathname.startsWith(ROUTES.adminAnalytics) ||
         pathname.startsWith("/admin/staff")
       );
     default:

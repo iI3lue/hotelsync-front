@@ -90,6 +90,7 @@ export function adminSectionsFor(
     { href: "/admin", label: "Panel" },
     { href: "/admin/hotels", label: "Hoteles" },
     { href: "/admin/staff", label: "Personal" },
+    { href: "/admin/analytics", label: "Revenue" },
     { href: "/admin/recepcion", label: "Recepción" },
     { href: "/admin/housekeeping", label: "Limpieza" },
     { href: "/admin/simulador", label: "Simulador OTA" },
@@ -104,13 +105,15 @@ export function adminSectionsFor(
         (s) =>
           s.href === "/admin" ||
           s.href === "/admin/hotels" ||
-          s.href === "/admin/staff"
+          s.href === "/admin/staff" ||
+          s.href === "/admin/analytics"
       );
     case "SUPER_ADMIN":
       return all.filter(
         (s) =>
           s.href === "/admin/hotels" ||
           s.href === "/admin/staff" ||
+          s.href === "/admin/analytics" ||
           s.href === "/admin/simulador"
       );
     case "GUEST":
