@@ -3,6 +3,7 @@ import {
   USER_API,
   clearSessionCookies,
   errorJson,
+  readRemember,
   setSessionCookies,
 } from "@/lib/auth-session";
 
@@ -32,6 +33,8 @@ export async function POST(request: NextRequest) {
   }
   const tokens = data as { access_token: string; refresh_token: string };
   const response = NextResponse.json({ refreshed: true });
-  setSessionCookies(response, tokens);
+  // Respeta la elección original de "Recordarme": una sesión de navegador
+  // no se vuelve persistente por rotar el refresh token.
+  setSessionCookies(response, tokens, readRemember(request));
   return response;
 }

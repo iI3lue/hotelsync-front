@@ -9,9 +9,11 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { TIER_COLORS, TIER_PROGRESS } from "@/lib/loyalty-tiers";
 
 /* ─── Types ─────────────────────────────────────────────────── */
 type ToastType = "success" | "error" | "info" | "warning";
+type ToastAccent = "silver" | "gold" | "platinum";
 
 interface Toast {
   id: string;
@@ -19,6 +21,8 @@ interface Toast {
   title: string;
   message?: string;
   duration?: number;
+  /** Acento con los colores del nivel de fidelización. */
+  accent?: ToastAccent;
 }
 
 interface ToastContextValue {
@@ -71,6 +75,8 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
     return () => clearTimeout(timer);
   }, [toast.id, duration, onRemove]);
 
+  const accent = toast.accent;
+
   return (
     <div
       role="alert"
@@ -78,7 +84,20 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
       className="animate-toast-in pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-2xl border border-brand-navy/6 bg-white p-4 shadow-elevated dark:border-white/8 dark:bg-brand-navy-800"
     >
       {/* Icon */}
-      <div className="mt-0.5 shrink-0">{ICONS[toast.type]}</div>
+      <div className="mt-0.5 shrink-0">
+        {accent ? (
+          <span
+            className={`flex h-6 w-6 items-center justify-center rounded-full border ${TIER_COLORS[accent]}`}
+            aria-hidden="true"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.5l2.9 6.06 6.6.86-4.86 4.62 1.24 6.46L12 17.4l-5.88 3.1 1.24-6.46L2.5 9.42l6.6-.86L12 2.5z" />
+            </svg>
+          </span>
+        ) : (
+          ICONS[toast.type]
+        )}
+      </div>
 
       {/* Content */}
       <div className="min-w-0 flex-1">
@@ -102,7 +121,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) =
 
       {/* Progress bar */}
       <div
-        className={`absolute bottom-0 left-0 h-0.5 ${PROGRESS_COLORS[toast.type]} animate-progress-bar rounded-full`}
+        className={`absolute bottom-0 left-0 h-0.5 ${accent ? TIER_PROGRESS[accent] : PROGRESS_COLORS[toast.type]} animate-progress-bar rounded-full`}
         style={{ animationDuration: `${duration}ms` }}
       />
     </div>

@@ -11,18 +11,7 @@ import {
 } from "../lib/api-loyalty";
 import Spinner from "@/components/Spinner";
 import { useToast } from "@/components/Toast";
-
-const TIER_COLORS: Record<string, string> = {
-  silver: "border-brand-navy/25 text-brand-navy/70 dark:border-white/30 dark:text-white/70",
-  gold: "border-brand-gold text-brand-gold",
-  platinum: "border-brand-navy bg-brand-navy text-white dark:border-white dark:bg-white dark:text-brand-navy",
-};
-
-const TIER_LABELS: Record<string, string> = {
-  silver: "Plata",
-  gold: "Oro",
-  platinum: "Platino",
-};
+import { TIER_COLORS, TIER_LABELS } from "@/lib/loyalty-tiers";
 
 const NEXT_TIER: Record<string, { name: string; min: number }> = {
   silver: { name: "Oro", min: 1000 },

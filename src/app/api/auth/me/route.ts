@@ -3,6 +3,7 @@ import {
   USER_API,
   clearSessionCookies,
   errorJson,
+  readRemember,
   setSessionCookies,
 } from "@/lib/auth-session";
 
@@ -61,10 +62,14 @@ export async function GET(request: NextRequest) {
       );
     }
     const response = NextResponse.json(data);
-    setSessionCookies(response, {
-      access_token: rotatedData.access_token,
-      refresh_token: rotatedData.refresh_token,
-    });
+    setSessionCookies(
+      response,
+      {
+        access_token: rotatedData.access_token,
+        refresh_token: rotatedData.refresh_token,
+      },
+      readRemember(request)
+    );
     return response;
   }
 

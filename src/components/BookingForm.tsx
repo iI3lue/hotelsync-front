@@ -31,6 +31,7 @@ import Spinner from "@/components/Spinner";
 import CardForm from "@/components/payments/CardForm";
 import PaymentMethodPicker, { type PaymentChoice } from "@/components/payments/PaymentMethodPicker";
 import PaymentBadge from "@/components/payments/PaymentBadge";
+import PointsEarned from "@/components/payments/PointsEarned";
 import Arrow from "@/components/ui/Arrow";
 
 /* ─── Helpers ──────────────────────────────────────────────── */
@@ -193,6 +194,17 @@ function BookingSuccess({
           </dd>
         </div>
       </dl>
+
+      {paid && (
+        <div className="mt-6">
+          <PointsEarned
+            bookingId={booking.booking_id}
+            amount={Number(booking.total_amount)}
+            active
+            className="border border-brand-navy/10 p-4 dark:border-white/10"
+          />
+        </div>
+      )}
 
       <div className="mt-8 space-y-3">
         <CodeRow label="Código de reserva" value={booking.booking_id} copied={copied === "booking"} onCopy={() => onCopy("booking", booking.booking_id)} />

@@ -9,6 +9,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import { CurrencyProvider } from "@/components/CurrencyProvider";
 import NavbarClient from "@/components/NavbarClient";
 import LoginToast from "@/components/LoginToast";
+import ConsentGate from "@/components/ConsentGate";
 import WarmUp from "@/components/WarmUp";
 import { ToastProvider } from "@/components/Toast";
 
@@ -55,6 +56,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Suspense fallback={null}>
             <LoginToast />
           </Suspense>
+
+          <ConsentGate />
 
           <SiteFooter />
           </ToastProvider>

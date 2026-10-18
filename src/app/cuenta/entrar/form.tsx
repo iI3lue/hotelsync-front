@@ -47,6 +47,7 @@ export default function EnterForm({
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +71,7 @@ export default function EnterForm({
     setLoading(true);
     setError(null);
     try {
-      const profile = await login(email.trim(), password);
+      const profile = await login(email.trim(), password, remember);
       // Recarga completa (no navegación cliente): el navbar y el resto de
       // la UI montan de cero y ven la sesión nueva. El toast lo muestra
       // LoginToast desde el marcador ?login=email.
@@ -199,6 +200,27 @@ export default function EnterForm({
                   </a>
                 </div>
               </div>
+
+              {/* Remember */}
+              <label
+                htmlFor="account-remember"
+                className="flex cursor-pointer items-center gap-2.5"
+              >
+                <input
+                  id="account-remember"
+                  name="remember"
+                  type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 accent-brand-gold dark:border-white/20"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  Recordarme
+                </span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  Mantener la sesión por 7 días
+                </span>
+              </label>
 
               {/* Submit */}
               <button

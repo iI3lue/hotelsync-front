@@ -15,9 +15,12 @@ import {
   type CardErrors,
   type CardFields,
 } from "@/lib/card";
+import { getMyLoyalty } from "@/lib/api-loyalty";
+import { projectedPoints, tierLabel } from "@/lib/loyalty-tiers";
 import Money from "@/components/Money";
 import { useCurrency } from "@/components/CurrencyProvider";
 import CardForm from "@/components/payments/CardForm";
+import PointsEarned from "@/components/payments/PointsEarned";
 import Spinner from "@/components/Spinner";
 
 export interface PayableBooking {
@@ -52,6 +55,8 @@ export default function PayOnlineModal({
   const [cardErrors, setCardErrors] = useState<CardErrors>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paidTx, setPaidTx] = useState<PaymentTransaction | null>(null);
+  const [preTier, setPreTier] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const firstRef = useRef<HTMLInputElement>(null);
 
@@ -61,6 +66,10 @@ export default function PayOnlineModal({
       .then((s) => active && setStatus(s))
       .catch(() => active && setStatus(null))
       .finally(() => active && setLoading(false));
+    // Nivel previo al pago: proyecta los puntos mientras la acreditación viaja.
+    getMyLoyalty()
+      .then((l) => active && setPreTier(l.account.tier))
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -104,6 +113,7 @@ export default function PayOnlineModal({
         cvc: card.cvc,
         holder: card.holder.trim(),
       });
+      setPaidTx(res.data);
       onPaid(res.data);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -124,6 +134,7 @@ export default function PayOnlineModal({
       try {
         const fresh = await fetchPaymentStatus(booking.booking_id);
         if (fresh.transaction?.status === "COMPLETED") {
+          setPaidTx(fresh.transaction);
           onPaid(fresh.transaction);
           return;
         }
@@ -161,18 +172,43 @@ export default function PayOnlineModal({
         </div>
 
         <div className="mt-6 flex items-baseline justify-between border-y border-brand-navy/10 py-4 dark:border-white/10">
-          <span className="eyebrow">{alreadyPaid ? "Pagado" : "Total a pagar"}</span>
+          <span className="eyebrow">{alreadyPaid || paidTx ? "Pagado" : "Total a pagar"}</span>
           <span className="font-display text-[2rem] leading-none tabular-nums text-brand-navy dark:text-white"><Money amountCOP={amount} /></span>
         </div>
 
+        {!loading && !alreadyPaid && !paidTx && preTier && amount > 0 && (
+          <p className="mt-3 text-right text-[0.8125rem] text-brand-navy/50 dark:text-white/45">
+            Este pago te suma ≈ {projectedPoints(Number(amount), preTier)} puntos · nivel {tierLabel(preTier)}
+          </p>
+        )}
+
         {loading ? (
           <div className="py-8 text-brand-navy/60 dark:text-white/55"><Spinner label="Consultando el estado del pago…" /></div>
+        ) : paidTx ? (
+          <div className="mt-6 space-y-6">
+            <p className="border-l-2 border-emerald-600 bg-emerald-50 p-4 text-[0.9rem] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+              Pago aprobado{paidTx.card_last4 ? ` •••• ${paidTx.card_last4}` : ""}. Gracias por tu compra.
+            </p>
+            <PointsEarned
+              bookingId={booking.booking_id}
+              amount={Number(amount)}
+              active
+              className="border border-brand-navy/10 p-4 dark:border-white/10"
+            />
+            <button type="button" onClick={onClose} className="btn-primary w-full">Entendido</button>
+          </div>
         ) : alreadyPaid ? (
           <div className="mt-6 space-y-6">
             <p className="border-l-2 border-emerald-600 bg-emerald-50 p-4 text-[0.9rem] text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
               Esta reserva ya está pagada
               {alreadyPaid.card_last4 ? ` •••• ${alreadyPaid.card_last4}` : ""}. No hace falta volver a pagar.
             </p>
+            <PointsEarned
+              bookingId={booking.booking_id}
+              amount={Number(amount)}
+              active
+              className="border border-brand-navy/10 p-4 dark:border-white/10"
+            />
             <button type="button" onClick={onClose} className="btn-primary w-full">Entendido</button>
           </div>
         ) : (

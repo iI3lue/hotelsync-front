@@ -15,11 +15,16 @@ export interface LoyaltyAccount {
 export interface PointsTransaction {
   transaction_id: string;
   user_id: string;
-  type: "earn" | "redeem";
+  type: "earn" | "redeem" | "reverse";
   points: number;
   booking_id: string | null;
   reason: string;
   created_at: string;
+}
+
+export interface BookingPointsResponse {
+  earn: PointsTransaction;
+  reverse: PointsTransaction | null;
 }
 
 export interface MyLoyaltyResponse {
@@ -62,6 +67,16 @@ export async function redeemLoyaltyPoints(
 export async function getLoyaltyLevels(): Promise<LoyaltyTierLevel[]> {
   const res = await clientFetch<DataEnvelope<LoyaltyTierLevel[]>>(
     "/api/loyalty/levels"
+  );
+  return res.data;
+}
+
+// Puntos acreditados de una reserva propia (null si todavía no se acreditó).
+export async function getBookingPoints(
+  bookingId: string
+): Promise<BookingPointsResponse | null> {
+  const res = await clientFetch<DataEnvelope<BookingPointsResponse | null>>(
+    `/api/loyalty/me/bookings/${bookingId}/points`
   );
   return res.data;
 }

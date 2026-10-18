@@ -8,6 +8,7 @@ export interface AuthProfile {
   picture_url: string | null;
   role: string;
   hotel_id: string | null;
+  terms_accepted_at: string | null;
 }
 
 interface SessionPayload {
@@ -17,6 +18,7 @@ interface SessionPayload {
     name: string;
     phone?: string | null;
     picture_url?: string | null;
+    terms_accepted_at?: string | null;
   };
   assignment: { role: string; hotel_id: string | null } | null;
 }
@@ -30,6 +32,7 @@ function toProfile(data: SessionPayload): AuthProfile {
     picture_url: data.user.picture_url ?? null,
     role: data.assignment?.role ?? "GUEST",
     hotel_id: data.assignment?.hotel_id ?? null,
+    terms_accepted_at: data.user.terms_accepted_at ?? null,
   };
 }
 
@@ -53,9 +56,10 @@ async function postSession(
 
 export async function login(
   email: string,
-  password: string
+  password: string,
+  remember = false
 ): Promise<AuthProfile> {
-  return postSession("/api/auth/login", { email, password });
+  return postSession("/api/auth/login", { email, password, remember });
 }
 
 export async function register(input: {
@@ -63,8 +67,25 @@ export async function register(input: {
   email: string;
   password: string;
   phone?: string;
+  terms_accepted: true;
 }): Promise<AuthProfile> {
   return postSession("/api/auth/register", input);
+}
+
+/** Registra la aceptación del tratamiento de datos (una sola vez). */
+export async function acceptConsent(): Promise<{ terms_accepted_at: string }> {
+  const res = await fetch("/api/auth/consent", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accepted: true }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      (err as { message?: string }).message || `Error ${res.status}`
+    );
+  }
+  return (await res.json()) as { terms_accepted_at: string };
 }
 
 export async function logout(): Promise<void> {
