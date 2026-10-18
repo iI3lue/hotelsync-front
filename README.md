@@ -39,6 +39,7 @@ Next.js 15 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 3 �
 | `/api/payments/*` | `NEXT_PUBLIC_PAYMENT_API_URL` |
 | `/api/analytics/*` | `NEXT_PUBLIC_ANALYTICS_API_URL` |
 | `/api/simulator/reservations` | `CHANNEL_MANAGER_API_URL` (route handler, solo SUPER_ADMIN) |
+| `/api/warmup` | BFF interno: 11 `/health` en paralelo |
 
 Auth: `/api/auth/{login,register,google,callback,refresh,me,logout,providers,password/*}`. El middleware solo **inyecta** el Bearer en las llamadas de API; nunca rota tokens. La renovación ocurre en `/api/auth/refresh`, `/api/auth/me` y el retry del cliente (las `Set-Cookie` sobre `NextResponse.next()` se pierden en los rewrites).
 
@@ -46,7 +47,7 @@ Auth: `/api/auth/{login,register,google,callback,refresh,me,logout,providers,pas
 
 - `src/middleware.ts`: exige sesión en `/admin` y redirige al panel por rol (`RECEPTIONIST → /admin/recepcion`, `HOUSEKEEPER → /admin/housekeeping`, `MANAGER`/`SUPER_ADMIN → /admin`).
 - `src/lib/routes.ts` (`isAllowedPathForRole`) y `src/lib/view-as.ts` (`adminSectionsFor`) repiten la matriz en cliente/servidor.
-- `WarmUp.tsx` despierta 9 de los 11 servicios al entrar (`/health` en paralelo); channel-manager y analytics no están incluidos.
+- `WarmUp.tsx` despierta los 11 servicios al entrar: un solo request a `/api/warmup` dispara los 11 `/health` en paralelo desde el servidor (sin CORS y sin exponer `CHANNEL_MANAGER_API_URL`).
 
 ## Variables de entorno
 
