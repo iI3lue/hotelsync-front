@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@/lib/api";
 import { fetchMyBookings } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
 import { formatDate, stayNights } from "@/lib/format";
+import {
+  isPaidBooking,
+  isVisibleMyBooking,
+  myBookingBadgeKey,
+} from "@/lib/my-bookings";
 import Money from "@/components/Money";
 import { canPayOnline } from "@/lib/payment-eligibility";
 import EmptyState from "@/components/EmptyState";
+import BookingDetailsModal from "@/components/payments/BookingDetailsModal";
 import PaymentBadge from "@/components/payments/PaymentBadge";
 import PayOnlineModal from "@/components/payments/PayOnlineModal";
 
@@ -29,6 +35,10 @@ const STATUS_BADGES: Record<string, { label: string; class: string }> = {
     label: "Completada",
     class: "border-slate-200 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200",
   },
+  paid: {
+    label: "Pagada",
+    class: "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300",
+  },
 };
 
 export default function MyBookings() {
@@ -36,6 +46,18 @@ export default function MyBookings() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [paying, setPaying] = useState<Booking | null>(null);
+  const [details, setDetails] = useState<Booking | null>(null);
+  const paidIds = useRef<Set<string>>(new Set());
+
+  function applyLocalChanges(list: Booking[]): Booking[] {
+    return list
+      .map((b) =>
+        paidIds.current.has(b.booking_id) && !isPaidBooking(b)
+          ? { ...b, payment_status: "PAID" as const }
+          : b
+      )
+      .filter((b) => isVisibleMyBooking(b));
+  }
 
   useEffect(() => {
     me().then((profile) => {
@@ -45,21 +67,37 @@ export default function MyBookings() {
       }
       setUserId(profile.user_id);
       fetchMyBookings()
-        .then(setBookings)
+        .then((list) => setBookings(applyLocalChanges(list)))
         .catch((err: unknown) =>
           setError(err instanceof Error ? err.message : "No se pudieron cargar tus reservas")
         );
     });
+    // El set de pagos locales es estable durante la vida del componente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handlePaid(bookingId: string) {
+    paidIds.current.add(bookingId);
     setBookings((prev) =>
-      prev ? prev.map((b) => (b.booking_id === bookingId ? { ...b, payment_status: "PAID" } : b)) : prev
+      prev
+        ? prev.map((b) =>
+            b.booking_id === bookingId
+              ? {
+                  ...b,
+                  payment_status: "PAID" as const,
+                  paid_at: new Date().toISOString(),
+                }
+              : b
+          )
+        : prev
     );
     setPaying(null);
-    // La confirmación llega por evento (`payment.completed`); reconciliamos luego.
+    // La confirmación llega por evento (`payment.completed`); reconciliamos luego
+    // sin perder el estado pagado si el evento todavía no llegó.
     window.setTimeout(() => {
-      fetchMyBookings().then(setBookings).catch(() => {});
+      fetchMyBookings()
+        .then((list) => setBookings(applyLocalChanges(list)))
+        .catch(() => {});
     }, 2500);
   }
 
@@ -93,8 +131,8 @@ export default function MyBookings() {
   if (bookings.length === 0) {
     return (
       <EmptyState
-        title="Todavía no tenés reservas"
-        description="Cuando reserves una estancia la vas a ver acá, con su código, fechas y estado."
+        title="No tenés reservas para mostrar"
+        description="Cuando reserves una estancia la vas a ver acá, con su código, fechas y estado, hasta el día de salida."
         actionHref="/buscar"
         actionLabel="Explorar hoteles"
       />
@@ -105,11 +143,12 @@ export default function MyBookings() {
     <>
       <ul className="divide-y divide-brand-navy/10 border-y border-brand-navy/10 dark:divide-white/10 dark:border-white/10">
         {bookings.map((b, i) => {
-          const badge = STATUS_BADGES[b.status.toLowerCase()] ?? {
+          const paid = isPaidBooking(b);
+          const badge = STATUS_BADGES[myBookingBadgeKey(b)] ?? {
             label: b.status,
             class: "border-slate-200 bg-slate-100 text-slate-700",
           };
-        const nights = stayNights(b.check_in, b.check_out).length;
+          const nights = stayNights(b.check_in, b.check_out).length;
 
           return (
             <li
@@ -123,7 +162,7 @@ export default function MyBookings() {
                   <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-[0.12em] ${badge.class}`}>
                     {badge.label}
                   </span>
-                  {b.status !== "cancelled" && (
+                  {!paid && b.status !== "cancelled" && (
                     <PaymentBadge status={b.payment_status} preference={b.payment_method_preference} />
                   )}
                   <span className="font-mono text-[0.75rem] uppercase tracking-wider text-brand-navy/45 dark:text-white/40">
@@ -144,25 +183,42 @@ export default function MyBookings() {
               </div>
               <div className="flex flex-col sm:items-end">
                 <span className="block text-eyebrow uppercase text-brand-navy/50 dark:text-white/45">
-                  {b.payment_status === "PAID" ? "Total pagado" : "Total"}
+                  {paid ? "Total pagado" : "Total"}
                 </span>
                 <span className="font-display text-[1.75rem] tabular-nums text-brand-navy dark:text-white">
                   <Money amountCOP={b.total_amount} />
                 </span>
-                {canPayOnline(b, userId) && (
+                {paid ? (
                   <button
                     type="button"
-                    onClick={() => setPaying(b)}
-                    className="btn-primary mt-4 w-full sm:w-auto"
+                    onClick={() => setDetails(b)}
+                    className="btn-outline mt-4 w-full sm:w-auto"
                   >
-                    Pagar ahora
+                    Ver detalles
                   </button>
+                ) : (
+                  canPayOnline(b, userId) && (
+                    <button
+                      type="button"
+                      onClick={() => setPaying(b)}
+                      className="btn-primary mt-4 w-full sm:w-auto"
+                    >
+                      Pagar ahora
+                    </button>
+                  )
                 )}
               </div>
             </li>
           );
         })}
       </ul>
+
+      {details && (
+        <BookingDetailsModal
+          booking={details}
+          onClose={() => setDetails(null)}
+        />
+      )}
 
       {paying && (
         <PayOnlineModal
