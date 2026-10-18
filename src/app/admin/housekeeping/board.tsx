@@ -8,9 +8,11 @@ import {
   fetchMyTasks,
   transitionCleaningTask,
   type CleaningTask,
+  type StaffMember,
 } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
 import type { Hotel } from "@/lib/api";
+import { useStaffNames } from "@/lib/use-staff-names";
 
 function statusBadge(status: string) {
   switch (status) {
@@ -29,13 +31,29 @@ function TaskRow({
   task,
   onAction,
   busy,
+  canAssign,
+  staffOptions,
+  staffNames,
+  myUserId,
+  myName,
 }: {
   task: CleaningTask;
   onAction: (task: CleaningTask, action: "start" | "complete" | "assign") => void;
   busy: string | null;
+  canAssign: boolean;
+  staffOptions: StaffMember[];
+  staffNames: Record<string, string>;
+  myUserId: string | null;
+  myName: string | null;
 }) {
   const [assignee, setAssignee] = useState("");
   const loading = busy === task.history_id;
+  // La fuente de verdad del asignado es `assigned_to_user_id` (UUID); el
+  // nombre se resuelve contra el listado de camaristas del hotel.
+  const assigneeId = task.assigned_to_user_id ?? null;
+  const assigneeName = assigneeId
+    ? staffNames[assigneeId] ?? (assigneeId === myUserId ? myName : null)
+    : null;
 
   return (
     <li className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-xs transition-all hover:border-brand-gold/40 hover:shadow-card dark:border-white/10 dark:bg-brand-navy-800">
@@ -58,8 +76,8 @@ function TaskRow({
           </div>
 
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {task.assigned_to
-              ? `Asignada a: ${task.assigned_to.slice(0, 12)}…`
+            {assigneeName
+              ? `Asignada a: ${assigneeName}`
               : "Sin camarista asignado aún"}
           </p>
         </div>
@@ -88,25 +106,33 @@ function TaskRow({
             </>
           ) : null}
 
-          {task.status === "pending" ? (
+          {canAssign && task.status === "pending" ? (
             <div className="flex flex-wrap items-center gap-2">
               <label htmlFor={`assign-${task.history_id}`} className="sr-only">
-                UUID del personal
+                Camarista
               </label>
-              <input
+              <select
                 id={`assign-${task.history_id}`}
-                type="text"
-                placeholder="UUID personal"
                 value={assignee}
                 onChange={(e) => setAssignee(e.target.value)}
-                className="h-9 w-36 rounded-xl border border-gray-300 bg-gray-50/50 px-2.5 font-mono text-xs text-gray-900 transition-colors focus:border-brand-gold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold/30 dark:border-white/10 dark:bg-brand-navy-900 dark:text-white"
-              />
+                disabled={loading || staffOptions.length === 0}
+                className="h-9 w-48 rounded-xl border border-gray-300 bg-gray-50/50 px-2.5 text-xs text-gray-900 transition-colors focus:border-brand-gold focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-gold/30 disabled:opacity-60 dark:border-white/10 dark:bg-brand-navy-900 dark:text-white"
+              >
+                <option value="">
+                  {staffOptions.length === 0 ? "Sin camaristas" : "Elegí camarista…"}
+                </option>
+                {staffOptions.map((member) => (
+                  <option key={member.user_id} value={member.user_id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
-                disabled={loading || !assignee.trim()}
+                disabled={loading || !assignee}
                 onClick={() => {
                   (task as CleaningTask & { draftAssignee?: string }).draftAssignee =
-                    assignee.trim();
+                    assignee;
                   onAction(task, "assign");
                 }}
                 className="inline-flex h-9 items-center justify-center rounded-xl bg-brand-navy px-3.5 text-xs font-semibold text-white shadow-xs transition-all hover:bg-brand-navy-900 active:scale-95 disabled:opacity-50 dark:bg-brand-gold dark:text-brand-navy dark:hover:bg-brand-gold-dark"
@@ -129,12 +155,19 @@ export default function HousekeepingBoard({
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [hotelId, setHotelId] = useState("");
   const [myRole, setMyRole] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState<string | null>(null);
+  const [myName, setMyName] = useState<string | null>(null);
   const [mine, setMine] = useState<CleaningTask[] | null>(null);
   const [hotel, setHotel] = useState<CleaningTask[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const isHousekeeper = myRole === "HOUSEKEEPER";
+  // Solo manager/super admin pueden asignar (el backend exige MANAGER).
+  const canAssign = myRole === "MANAGER" || myRole === "SUPER_ADMIN";
+  const { list: staffOptions, names: staffNames } = useStaffNames(
+    canAssign ? hotelId : ""
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -142,6 +175,8 @@ export default function HousekeepingBoard({
       if (cancelled) return;
       const role = profile?.role ?? null;
       setMyRole(role);
+      setMyUserId(profile?.user_id ?? null);
+      setMyName(profile?.name ?? null);
       if (role === "HOUSEKEEPER") {
         // El housekeeper solo opera su hotel asignado: no se expone el
         // catálogo completo y se ignora cualquier ?hotel_id= manipulado
@@ -348,7 +383,17 @@ export default function HousekeepingBoard({
         ) : (
           <ul className="space-y-3">
             {mine.map((t) => (
-              <TaskRow key={t.history_id} task={t} onAction={handleAction} busy={busy} />
+              <TaskRow
+                key={t.history_id}
+                task={t}
+                onAction={handleAction}
+                busy={busy}
+                canAssign={canAssign}
+                staffOptions={staffOptions}
+                staffNames={staffNames}
+                myUserId={myUserId}
+                myName={myName}
+              />
             ))}
           </ul>
         )}
@@ -381,7 +426,17 @@ export default function HousekeepingBoard({
         ) : (
           <ul className="space-y-3">
             {hotel.map((t) => (
-              <TaskRow key={t.history_id} task={t} onAction={handleAction} busy={busy} />
+              <TaskRow
+                key={t.history_id}
+                task={t}
+                onAction={handleAction}
+                busy={busy}
+                canAssign={canAssign}
+                staffOptions={staffOptions}
+                staffNames={staffNames}
+                myUserId={myUserId}
+                myName={myName}
+              />
             ))}
           </ul>
         )}

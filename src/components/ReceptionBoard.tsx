@@ -7,6 +7,7 @@ import PaymentBadge from "@/components/payments/PaymentBadge";
 import RegisterPaymentModal from "@/components/payments/RegisterPaymentModal";
 import { timeoutSignal } from "@/lib/timeout-signal";
 import { useRoomNames } from "@/lib/use-room-names";
+import { formatDate } from "@/lib/format";
 
 interface ReceptionBoardProps {
   hotelId: string;
@@ -225,7 +226,7 @@ export default function ReceptionBoard({ hotelId, date }: ReceptionBoardProps) {
                       </span>
                       <span className="text-gray-400">·</span>
                       <span className="tabular-nums">
-                        {b.check_in} → {b.check_out}
+                        {formatDate(b.check_in)} → {formatDate(b.check_out)}
                       </span>
                     </div>
                   </div>

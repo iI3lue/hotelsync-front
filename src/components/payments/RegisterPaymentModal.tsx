@@ -9,7 +9,7 @@ import {
   type PaymentStatusInfo,
   type PaymentTransaction,
 } from "@/lib/api-client";
-import { formatPrice } from "@/lib/format";
+import { formatDate, formatPrice } from "@/lib/format";
 import Spinner from "@/components/Spinner";
 
 export interface PayableBooking {
@@ -120,7 +120,7 @@ export default function RegisterPaymentModal({
               {booking.guest_name || "Huésped"}
             </h2>
             <p className="mt-1 text-[0.85rem] text-brand-navy/55 dark:text-white/50">
-              Reserva <span className="font-mono">{booking.booking_id.slice(0, 8)}</span> · {booking.check_in} → {booking.check_out}
+              Reserva <span className="font-mono">{booking.booking_id.slice(0, 8)}</span> · {formatDate(booking.check_in)} → {formatDate(booking.check_out)}
             </p>
           </div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="Cerrar" className="p-1 text-brand-navy/50 hover:text-brand-navy dark:text-white/50 dark:hover:text-white">

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { fetchPhysicalRooms, fetchRoomTypes } from "@/lib/api";
 import { getSessionScope } from "@/lib/server-session";
+import { formatDate } from "@/lib/format";
 import PhysicalRoomForm from "@/components/PhysicalRoomForm";
 import RoomTypeForm from "@/components/RoomTypeForm";
 
@@ -106,7 +107,7 @@ export default async function RoomTypesPage({
                     {room.roomType.name}
                   </td>
                   <td className="break-words px-2 py-3 text-xs tabular-nums md:px-6 md:py-4 md:text-sm">
-                    {room.available_from.slice(0, 10)}
+                    {formatDate(room.available_from)}
                   </td>
                   <td className="break-words px-2 py-3 text-xs md:px-6 md:py-4 md:text-sm">
                     {room.is_active ? "Activa" : "Inactiva"}

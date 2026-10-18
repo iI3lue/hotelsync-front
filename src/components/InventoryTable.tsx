@@ -89,7 +89,7 @@ export default function InventoryTable({
             </select>
           ) : (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Este hotel ({hotelId.slice(0, 8)}…) no tiene tipos cargados.
+              Este hotel todavía no tiene tipos de habitación cargados.
             </p>
           )}
         </div>

@@ -7,7 +7,7 @@ function todayIso(): string {
 }
 
 function formattedToday(): string {
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat("es-CO", {
     weekday: "long",
     day: "numeric",
     month: "long",

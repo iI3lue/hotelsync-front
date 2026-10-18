@@ -66,7 +66,7 @@ function StaffTable({
           {staff.map((member) => {
             const assignment = member.assignments[0];
             const hotelName = assignment?.hotel_id
-              ? (hotelMap[assignment.hotel_id] ?? assignment.hotel_id.slice(0, 8) + "…")
+              ? (hotelMap[assignment.hotel_id] ?? "—")
               : "—";
             return (
               <tr key={member.user_id} className="hover:bg-gray-50/50 dark:hover:bg-white/5">

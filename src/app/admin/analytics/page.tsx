@@ -11,7 +11,7 @@ import {
 } from "@/lib/api-client";
 import type { Hotel } from "@/lib/api";
 import { toIsoDate } from "@/lib/dates";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 
 function isoDaysFromToday(offset: number): string {
   const day = new Date();
@@ -234,7 +234,7 @@ export default function AnalyticsPage() {
                     <li
                       key={point.date}
                       className="flex h-full min-w-[6px] max-w-10 flex-1 flex-col justify-end"
-                      title={`${point.date}: ${percent(point.occupancy)} (${point.occupied_nights}/${point.available_nights})`}
+                      title={`${formatDate(point.date)}: ${percent(point.occupancy)} (${point.occupied_nights}/${point.available_nights})`}
                     >
                       <div
                         aria-hidden="true"
@@ -248,14 +248,14 @@ export default function AnalyticsPage() {
                         }}
                       />
                       <span className="sr-only">
-                        {`${point.date}: ${percent(point.occupancy)}`}
+                        {`${formatDate(point.date)}: ${percent(point.occupancy)}`}
                       </span>
                     </li>
                   ))}
                 </ul>
                 <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span>{occupancy[0]?.date}</span>
-                  <span>{occupancy[occupancy.length - 1]?.date}</span>
+                  <span>{occupancy[0] ? formatDate(occupancy[0].date) : ""}</span>
+                  <span>{occupancy.length > 0 ? formatDate(occupancy[occupancy.length - 1].date) : ""}</span>
                 </div>
               </>
             ) : (
@@ -290,7 +290,7 @@ export default function AnalyticsPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-white/6">
                   {dashboard.forecast.map((point) => (
                     <tr key={point.date} className="text-gray-700 dark:text-gray-200">
-                      <td className="py-2 pr-4 tabular-nums">{point.date}</td>
+                      <td className="py-2 pr-4 tabular-nums">{formatDate(point.date)}</td>
                       <td className="py-2 pr-4 tabular-nums">
                         {percent(point.occupancy_expected)}
                       </td>

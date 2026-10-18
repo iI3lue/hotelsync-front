@@ -7,6 +7,7 @@ import { postJson } from "@/lib/api-client";
 import { timeoutSignal } from "@/lib/timeout-signal";
 import { useRoomNames } from "@/lib/use-room-names";
 import PaymentBadge from "@/components/payments/PaymentBadge";
+import { formatDate } from "@/lib/format";
 
 interface BookingsAutoTableProps {
   hotelId: string;
@@ -208,7 +209,7 @@ export default function BookingsAutoTable({ hotelId, date }: BookingsAutoTablePr
                 <tr key={b.booking_id}>
                   <td className="whitespace-nowrap px-4 py-2 font-mono text-xs">{b.booking_id.slice(0, 8)}…</td>
                   <td className="whitespace-nowrap px-4 py-2">{roomNames[b.room_type_id] ?? "—"}</td>
-                  <td className="whitespace-nowrap px-4 py-2 tabular-nums">{b.check_in} → {b.check_out}</td>
+                  <td className="whitespace-nowrap px-4 py-2 tabular-nums">{formatDate(b.check_in)} → {formatDate(b.check_out)}</td>
                   <td className="whitespace-nowrap px-4 py-2">
                     <span className={`rounded px-2 py-0.5 text-xs font-semibold ${statusBadge(b.status)}`}>
                       {b.status}
