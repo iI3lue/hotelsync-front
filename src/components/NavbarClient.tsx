@@ -14,6 +14,7 @@ import { defaultRouteForRole, isAllowedPathForRole } from "@/lib/routes";
 import ViewAsSelector from "@/components/ViewAsSelector";
 import ViewingAsBanner from "@/components/ViewingAsBanner";
 import ThemeToggle from "@/components/ThemeToggle";
+import LogoMark from "@/components/LogoMark";
 
 const NAV_LINKS = [
   { href: "/",             label: "Inicio" },
@@ -28,8 +29,11 @@ function hasImmersiveHero(pathname: string): boolean {
 
 function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span translate="no" className={`font-display text-[1.15rem] uppercase leading-none tracking-[0.32em] sm:text-[1.3rem] ${className}`}>
-      Hotel<span className="mx-[0.12em] inline-block h-[0.32em] w-[0.32em] translate-y-[-0.2em] rotate-45 border border-current opacity-70" aria-hidden="true" />Sync
+    <span translate="no" className={`flex items-center gap-2.5 ${className}`}>
+      <LogoMark className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" />
+      <span className="font-display text-[1.15rem] uppercase leading-none tracking-[0.32em] sm:text-[1.3rem]">
+        HotelSync
+      </span>
     </span>
   );
 }

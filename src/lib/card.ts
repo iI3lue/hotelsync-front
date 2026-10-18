@@ -103,8 +103,19 @@ export function validateCard(fields: CardFields, now = new Date()): CardErrors {
   return errors;
 }
 
-/** Tarjetas de la pasarela simulada (documentadas en payment-service). */
-export const TEST_CARDS = {
-  approved: "4111 1111 1111 1111",
-  declined: "4000 0000 0000 0002",
-} as const;
+export interface TestCard {
+  number: string;
+  label: string;
+  approved: boolean;
+}
+
+/**
+ * Tarjetas de la pasarela simulada (documentadas en payment-service).
+ * Todas pasan Luhn; `approved: false` es la única que la pasarela rechaza.
+ */
+export const TEST_CARDS: readonly TestCard[] = [
+  { number: "4111 1111 1111 1111", label: "Visa", approved: true },
+  { number: "5555 5555 5555 4444", label: "Mastercard", approved: true },
+  { number: "3782 822463 10005", label: "American Express", approved: true },
+  { number: "4000 0000 0000 0002", label: "Rechazo simulado", approved: false },
+];

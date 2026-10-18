@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fetchHotels } from "@/lib/api";
+import LogoMark from "@/components/LogoMark";
 
 const COLS = [
   {
@@ -53,7 +54,8 @@ export default function SiteFooter() {
       <div className="shell pb-10 pt-20">
         <div className="grid gap-14 lg:grid-cols-[1.3fr_2fr]">
           <div className="max-w-sm">
-            <p className="font-display text-[2rem] leading-[1.1]">
+            <LogoMark className="h-11 w-11" />
+            <p className="mt-6 font-display text-[2rem] leading-[1.1]">
               Estancias con carácter, reservadas directo con la casa.
             </p>
             <Link href="/buscar" className="link-line mt-8 text-white/90">
@@ -100,7 +102,14 @@ export default function SiteFooter() {
 
         <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 text-xs text-white/40 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} HotelSync. Todos los derechos reservados.</p>
-          <p>Tarifa oficial y confirmación inmediata al reservar directo.</p>
+          <nav aria-label="Enlaces legales" className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <Link href="/terminos" className="transition-colors hover:text-white/75">
+              Términos y condiciones
+            </Link>
+            <Link href="/privacidad" className="transition-colors hover:text-white/75">
+              Política de privacidad
+            </Link>
+          </nav>
         </div>
       </div>
     </footer>

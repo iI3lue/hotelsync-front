@@ -9,6 +9,7 @@ import {
   formatExpiry,
   type CardErrors,
   type CardFields,
+  type TestCard,
 } from "@/lib/card";
 
 interface CardFormProps {
@@ -36,6 +37,16 @@ export default function CardForm({ value, onChange, errors, disabled }: CardForm
   const set = (patch: Partial<CardFields>) => onChange({ ...value, ...patch });
   const field = (name: keyof CardFields) =>
     `input-field ${errors[name] ? "border-red-600 focus:border-red-600 dark:border-red-400" : ""}`;
+
+  // Un clic deja la tarjeta de prueba lista para enviar: número, fecha y código.
+  const fillTestCard = (card: TestCard) => {
+    const testBrand = detectBrand(card.number);
+    set({
+      number: card.number,
+      expiry: "12/30",
+      cvc: testBrand === "amex" ? "1234" : "123",
+    });
+  };
 
   return (
     <fieldset disabled={disabled} className="min-w-0 space-y-5">
@@ -115,17 +126,40 @@ export default function CardForm({ value, onChange, errors, disabled }: CardForm
         <FieldError id="card-holder-error" message={errors.holder} />
       </div>
 
-      <div className="flex items-start gap-3 border-l-2 border-brand-gold bg-brand-paper p-4 text-[0.8125rem] leading-relaxed text-brand-navy/70 dark:bg-white/5 dark:text-white/65">
-        <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0 text-brand-gold" fill="none" stroke="currentColor" strokeWidth={1.4}>
-          <rect x="5" y="10.5" width="14" height="10" rx="1" />
-          <path d="M8 10.5V7.5a4 4 0 018 0v3" />
-        </svg>
-        <p>
-          Pasarela de prueba: no se cobra dinero real ni se guarda tu tarjeta.
-          Usá <button type="button" onClick={() => set({ number: TEST_CARDS.approved })} className="font-mono underline underline-offset-2">{TEST_CARDS.approved}</button> para
-          aprobar o <button type="button" onClick={() => set({ number: TEST_CARDS.declined })} className="font-mono underline underline-offset-2">{TEST_CARDS.declined}</button> para
-          simular un rechazo, con cualquier fecha futura.
-        </p>
+      <div className="space-y-4 border-l-2 border-brand-gold bg-brand-paper p-4 dark:bg-white/5">
+        <div className="flex items-start gap-3 text-[0.8125rem] leading-relaxed text-brand-navy/70 dark:text-white/65">
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0 text-brand-gold" fill="none" stroke="currentColor" strokeWidth={1.4}>
+            <rect x="5" y="10.5" width="14" height="10" rx="1" />
+            <path d="M8 10.5V7.5a4 4 0 018 0v3" />
+          </svg>
+          <p>
+            Pasarela de prueba: no se cobra dinero real ni se guarda tu tarjeta. Tocá una
+            tarjeta para completar los datos (después podés cambiar la fecha y el código).
+          </p>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {TEST_CARDS.map((card) => (
+            <li key={card.number}>
+              <button
+                type="button"
+                onClick={() => fillTestCard(card)}
+                title={card.approved ? "Aprueba el pago" : "Simula un rechazo"}
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-left transition-colors ${
+                  card.approved
+                    ? "border-brand-navy/15 bg-white hover:border-brand-navy/45 dark:border-white/15 dark:bg-white/5 dark:hover:border-white/40"
+                    : "border-red-300/70 bg-red-50/60 hover:border-red-400 dark:border-red-800/50 dark:bg-red-950/20 dark:hover:border-red-600/70"
+                }`}
+              >
+                <span className="text-[0.78rem] font-semibold text-brand-navy dark:text-white">
+                  {card.label}
+                </span>
+                <span className="font-mono text-[0.72rem] tabular-nums text-brand-navy/55 dark:text-white/45">
+                  {card.number}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     </fieldset>
   );

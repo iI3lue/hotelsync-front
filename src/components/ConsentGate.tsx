@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { acceptConsent, logout, me } from "@/lib/auth-client";
+import { LEGAL_PATHS } from "@/lib/routes";
 
 /**
  * Gate de consentimiento de datos: las cuentas GUEST sin
@@ -15,27 +17,29 @@ export default function ConsentGate() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const checked = useRef(false);
+  const pathname = usePathname();
+  const isLegal = LEGAL_PATHS.includes(pathname);
 
   useEffect(() => {
-    if (checked.current) return;
+    if (isLegal || checked.current) return;
     checked.current = true;
     void me().then((profile) => {
       if (profile && profile.role === "GUEST" && !profile.terms_accepted_at) {
         setVisible(true);
       }
     });
-  }, []);
+  }, [isLegal]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || isLegal) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [visible]);
+  }, [visible, isLegal]);
 
-  if (!visible) return null;
+  if (!visible || isLegal) return null;
 
   async function handleAccept() {
     setSubmitting(true);
@@ -100,11 +104,21 @@ export default function ConsentGate() {
         <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
           Antes de continuar necesitamos tu autorización para tratar tus
           datos personales conforme a la Ley 1581, nuestros{" "}
-          <a href="#" className="underline hover:text-brand-gold">
+          <a
+            href="/terminos"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-brand-gold"
+          >
             Términos de uso
           </a>{" "}
           y la{" "}
-          <a href="#" className="underline hover:text-brand-gold">
+          <a
+            href="/privacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-brand-gold"
+          >
             Política de privacidad
           </a>
           .

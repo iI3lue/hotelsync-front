@@ -236,7 +236,9 @@ export default function CreateForm({
                 <span className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                   Acepto el tratamiento de mis datos personales conforme a los{" "}
                   <a
-                    href="#"
+                    href="/terminos"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     className="underline hover:text-brand-gold"
                   >
@@ -244,7 +246,9 @@ export default function CreateForm({
                   </a>{" "}
                   y la{" "}
                   <a
-                    href="#"
+                    href="/privacidad"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     className="underline hover:text-brand-gold"
                   >
