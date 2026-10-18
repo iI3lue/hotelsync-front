@@ -22,6 +22,7 @@ export function canPayOnline(
     currentUserId !== null &&
     booking.booked_by_user_id === currentUserId &&
     booking.status !== "cancelled" &&
-    booking.payment_status !== "PAID"
+    booking.payment_status !== "PAID" &&
+    booking.payment_status !== "REFUNDED"
   );
 }

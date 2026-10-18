@@ -121,7 +121,7 @@ export interface Booking {
   paid_at?: string | null;
 }
 
-export type PaymentStatus = "PENDING" | "PAID";
+export type PaymentStatus = "PENDING" | "PAID" | "REFUNDED";
 export type PaymentMethodPreference = "ONLINE" | "RECEPTION";
 
 /** Respuesta del alta: incluye el manage token una sola vez. */

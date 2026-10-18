@@ -204,6 +204,16 @@ export async function fetchMyBookings(): Promise<import("./api").Booking[]> {
   return clientFetch<import("./api").Booking[]>("/api/booking/bookings/me");
 }
 
+/** Cancela una reserva propia (el reembolso, si estaba paga, es simulado). */
+export async function cancelBooking(
+  bookingId: string
+): Promise<import("./api").Booking> {
+  return clientPost<import("./api").Booking>(
+    `/api/booking/bookings/${encodeURIComponent(bookingId)}/cancel`,
+    {}
+  );
+}
+
 export async function fetchPhysicalRooms(
   hotelId: string
 ): Promise<PhysicalRoom[]> {

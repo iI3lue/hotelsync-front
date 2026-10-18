@@ -18,17 +18,20 @@ export function checkOutIsoDate(booking: Pick<Booking, "check_out">): string | n
 
 /**
  * La reserva sigue en "Mis reservas" durante todo el día de salida y
- * desaparece al día siguiente. Aplica a pagadas, impagas y canceladas.
+ * desaparece al día siguiente. Las canceladas se ocultan de inmediato.
  */
 export function isVisibleMyBooking(
-  booking: Pick<Booking, "check_out">,
+  booking: Pick<Booking, "check_out"> & Partial<Pick<Booking, "status">>,
   today: string = localIsoDate()
 ): boolean {
+  if (booking.status === "cancelled") return false;
   const checkOut = checkOutIsoDate(booking);
   return checkOut === null || checkOut >= today;
 }
 
-export function visibleMyBookings<T extends Pick<Booking, "check_out">>(
+export function visibleMyBookings<
+  T extends Pick<Booking, "check_out"> & Partial<Pick<Booking, "status">>
+>(
   bookings: T[],
   today: string = localIsoDate()
 ): T[] {
@@ -39,6 +42,24 @@ export function isPaidBooking(
   booking: Pick<Booking, "payment_status">
 ): boolean {
   return booking.payment_status === "PAID";
+}
+
+/**
+ * Sólo el dueño exacto (`booked_by_user_id`) puede cancelar desde la web,
+ * antes del check-in y mientras la reserva siga pendiente o confirmada.
+ * Las pagadas también se cancelan (el reembolso es simulado).
+ */
+export function canCancelBooking(
+  booking: Pick<Booking, "status" | "payment_status" | "booked_by_user_id" | "check_in">,
+  currentUserId: string | null,
+  today: string = localIsoDate()
+): boolean {
+  if (currentUserId === null) return false;
+  if (booking.booked_by_user_id !== currentUserId) return false;
+  if (booking.status !== "pending" && booking.status !== "confirmed") {
+    return false;
+  }
+  return booking.check_in.slice(0, 10) >= today;
 }
 
 /**

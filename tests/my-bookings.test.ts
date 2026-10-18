@@ -1,4 +1,5 @@
 import {
+  canCancelBooking,
   isVisibleMyBooking,
   localIsoDate,
   myBookingBadgeKey,
@@ -45,18 +46,78 @@ describe("isVisibleMyBooking", () => {
       )
     ).toBe(false);
   });
+
+  it("oculta una reserva cancelada aunque su salida sea futura", () => {
+    expect(
+      isVisibleMyBooking(
+        { check_out: "2026-12-01", status: "cancelled" },
+        "2026-10-17"
+      )
+    ).toBe(false);
+  });
+});
+
+describe("canCancelBooking", () => {
+  const future = {
+    status: "pending" as const,
+    payment_status: "PENDING" as const,
+    booked_by_user_id: "user-1",
+    check_in: "2026-10-18T00:00:00.000Z",
+  };
+
+  it("el dueño puede cancelar antes del check-in", () => {
+    expect(canCancelBooking(future, "user-1", "2026-10-17")).toBe(true);
+    expect(
+      canCancelBooking(
+        { ...future, status: "confirmed", payment_status: "PAID" },
+        "user-1",
+        "2026-10-17"
+      )
+    ).toBe(true);
+  });
+
+  it("permite cancelar el mismo día del check-in", () => {
+    expect(canCancelBooking(future, "user-1", "2026-10-18")).toBe(true);
+  });
+
+  it("no permite cancelar después del check-in", () => {
+    expect(canCancelBooking(future, "user-1", "2026-10-19")).toBe(false);
+  });
+
+  it("exige ser el dueño exacto y tener sesión", () => {
+    expect(canCancelBooking(future, "user-2", "2026-10-17")).toBe(false);
+    expect(canCancelBooking(future, null, "2026-10-17")).toBe(false);
+    expect(
+      canCancelBooking(
+        { ...future, booked_by_user_id: null },
+        "user-1",
+        "2026-10-17"
+      )
+    ).toBe(false);
+  });
+
+  it("excluye reservas canceladas o de otro estado", () => {
+    expect(
+      canCancelBooking(
+        { ...future, status: "cancelled" },
+        "user-1",
+        "2026-10-17"
+      )
+    ).toBe(false);
+  });
 });
 
 describe("visibleMyBookings", () => {
-  it("filtra vencidas sin tocar las vigentes", () => {
+  it("filtra vencidas y canceladas sin tocar las vigentes", () => {
     const list = [
       { check_out: "2026-10-15" },
       { check_out: "2026-10-17" },
-      { check_out: "2026-11-01" },
+      { check_out: "2026-11-01", status: "confirmed" as const },
+      { check_out: "2026-11-01", status: "cancelled" as const },
     ];
     expect(visibleMyBookings(list, "2026-10-17")).toEqual([
       { check_out: "2026-10-17" },
-      { check_out: "2026-11-01" },
+      { check_out: "2026-11-01", status: "confirmed" },
     ]);
   });
 });

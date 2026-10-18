@@ -7,6 +7,7 @@ import { fetchMyBookings } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
 import { formatDate, stayNights } from "@/lib/format";
 import {
+  canCancelBooking,
   isPaidBooking,
   isVisibleMyBooking,
   myBookingBadgeKey,
@@ -15,6 +16,7 @@ import Money from "@/components/Money";
 import { canPayOnline } from "@/lib/payment-eligibility";
 import EmptyState from "@/components/EmptyState";
 import BookingDetailsModal from "@/components/payments/BookingDetailsModal";
+import CancelBookingModal from "@/components/payments/CancelBookingModal";
 import PaymentBadge from "@/components/payments/PaymentBadge";
 import PayOnlineModal from "@/components/payments/PayOnlineModal";
 
@@ -47,6 +49,8 @@ export default function MyBookings() {
   const [userId, setUserId] = useState<string | null>(null);
   const [paying, setPaying] = useState<Booking | null>(null);
   const [details, setDetails] = useState<Booking | null>(null);
+  const [cancelling, setCancelling] = useState<Booking | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const paidIds = useRef<Set<string>>(new Set());
 
   function applyLocalChanges(list: Booking[]): Booking[] {
@@ -101,6 +105,16 @@ export default function MyBookings() {
     }, 2500);
   }
 
+  function handleCancelled(bookingId: string) {
+    setBookings((prev) =>
+      prev ? prev.filter((b) => b.booking_id !== bookingId) : prev
+    );
+    setCancelling(null);
+    setNotice(
+      "Reserva cancelada. Si estaba paga, el reembolso es simulado y queda registrado en la reserva."
+    );
+  }
+
   if (error) {
     return (
       <EmptyState
@@ -130,20 +144,33 @@ export default function MyBookings() {
 
   if (bookings.length === 0) {
     return (
-      <EmptyState
-        title="No tenés reservas para mostrar"
-        description="Cuando reserves una estancia la vas a ver acá, con su código, fechas y estado, hasta el día de salida."
-        actionHref="/buscar"
-        actionLabel="Explorar hoteles"
-      />
+      <>
+        {notice && (
+          <p role="status" className="mb-6 border-l-2 border-emerald-500 pl-3 text-[0.9rem] text-emerald-800 dark:text-emerald-300">
+            {notice}
+          </p>
+        )}
+        <EmptyState
+          title="No tenés reservas para mostrar"
+          description="Cuando reserves una estancia la vas a ver acá, con su código, fechas y estado, hasta el día de salida."
+          actionHref="/buscar"
+          actionLabel="Explorar hoteles"
+        />
+      </>
     );
   }
 
   return (
     <>
+      {notice && (
+        <p role="status" className="mb-6 border-l-2 border-emerald-500 pl-3 text-[0.9rem] text-emerald-800 dark:text-emerald-300">
+          {notice}
+        </p>
+      )}
       <ul className="divide-y divide-brand-navy/10 border-y border-brand-navy/10 dark:divide-white/10 dark:border-white/10">
         {bookings.map((b, i) => {
           const paid = isPaidBooking(b);
+          const cancellable = canCancelBooking(b, userId);
           const badge = STATUS_BADGES[myBookingBadgeKey(b)] ?? {
             label: b.status,
             class: "border-slate-200 bg-slate-100 text-slate-700",
@@ -188,25 +215,35 @@ export default function MyBookings() {
                 <span className="font-display text-[1.75rem] tabular-nums text-brand-navy dark:text-white">
                   <Money amountCOP={b.total_amount} />
                 </span>
-                {paid ? (
-                  <button
-                    type="button"
-                    onClick={() => setDetails(b)}
-                    className="btn-outline mt-4 w-full sm:w-auto"
-                  >
-                    Ver detalles
-                  </button>
-                ) : (
-                  canPayOnline(b, userId) && (
+                <div className="mt-4 flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+                  {paid && (
+                    <button
+                      type="button"
+                      onClick={() => setDetails(b)}
+                      className="btn-outline w-full sm:w-auto"
+                    >
+                      Ver detalles
+                    </button>
+                  )}
+                  {!paid && canPayOnline(b, userId) && (
                     <button
                       type="button"
                       onClick={() => setPaying(b)}
-                      className="btn-primary mt-4 w-full sm:w-auto"
+                      className="btn-primary w-full sm:w-auto"
                     >
                       Pagar ahora
                     </button>
-                  )
-                )}
+                  )}
+                  {cancellable && (
+                    <button
+                      type="button"
+                      onClick={() => setCancelling(b)}
+                      className="btn-outline w-full text-red-700 dark:text-red-300 sm:w-auto"
+                    >
+                      Cancelar reserva
+                    </button>
+                  )}
+                </div>
               </div>
             </li>
           );
@@ -225,6 +262,14 @@ export default function MyBookings() {
           booking={paying}
           onClose={() => setPaying(null)}
           onPaid={() => handlePaid(paying.booking_id)}
+        />
+      )}
+
+      {cancelling && (
+        <CancelBookingModal
+          booking={cancelling}
+          onClose={() => setCancelling(null)}
+          onCancelled={handleCancelled}
         />
       )}
     </>

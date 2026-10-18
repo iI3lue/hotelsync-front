@@ -19,6 +19,12 @@ describe("canPayOnline", () => {
     ).toBe(false);
   });
 
+  it("una reserva reembolsada no se vuelve a pagar", () => {
+    expect(
+      canPayOnline({ status: "confirmed", payment_status: "REFUNDED", booked_by_user_id: ME }, ME)
+    ).toBe(false);
+  });
+
   it("pagar en el hotel (RECEPTION) queda pagadero en línea", () => {
     expect(
       canPayOnline({ status: "confirmed", payment_status: "PENDING", booked_by_user_id: ME }, ME)

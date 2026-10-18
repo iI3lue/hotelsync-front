@@ -9,7 +9,7 @@ Aplicación web única de HotelSync (Next.js 15 + React 19 + Tailwind): sitio p�
 
 | Hace | No hace |
 | --- | --- |
-| UI pública: búsqueda, disponibilidad, reserva, cuenta y mis reservas | Persistir datos de negocio (viven en cada microservicio) |
+| UI pública: búsqueda, disponibilidad, reserva, cuenta, mis reservas y cancelación | Persistir datos de negocio (viven en cada microservicio) |
 | Panel `/admin` con guards por rol | Autorizar de verdad (la seguridad real está en cada API) |
 | BFF: inyecta el Bearer desde la cookie y reescribe `/api/*` | Rotar tokens en el middleware |
 | Login con Google vía Auth0 | Gestionar pagos reales |
@@ -48,6 +48,12 @@ Auth: `/api/auth/{login,register,google,callback,refresh,me,logout,providers,pas
 - `src/middleware.ts`: exige sesión en `/admin` y redirige al panel por rol (`RECEPTIONIST → /admin/recepcion`, `HOUSEKEEPER → /admin/housekeeping`, `MANAGER`/`SUPER_ADMIN → /admin`).
 - `src/lib/routes.ts` (`isAllowedPathForRole`) y `src/lib/view-as.ts` (`adminSectionsFor`) repiten la matriz en cliente/servidor.
 - `WarmUp.tsx` despierta los 11 servicios al entrar: un solo request a `/api/warmup` dispara los 11 `/health` en paralelo desde el servidor (sin CORS y sin exponer `CHANNEL_MANAGER_API_URL`).
+
+## Mis reservas
+
+`/mis-reservas` lista las reservas de la cuenta (y las del email verificado) hasta el día de salida. Cada una muestra su estado de pago; si está pagada, se puede abrir el detalle del cobro. Si sigue impaga y el huésped es el dueño exacto (`booked_by_user_id`), aparece **Pagar ahora**.
+
+El dueño puede **cancelar** antes del check-in con confirmación explícita. La reserva no se borra: queda `cancelled`, desaparece de la lista y libera inventario. Si estaba paga, payment-service procesa un **reembolso simulado** y el pago queda como **Reembolsada** (`REFUNDED`); el flujo es asíncrono vía RabbitMQ y no requiere otra acción del huésped.
 
 ## Variables de entorno
 
