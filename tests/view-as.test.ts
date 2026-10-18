@@ -100,11 +100,12 @@ describe("adminSectionsFor", () => {
     ]);
   });
 
-  it("manager ve Panel, Hoteles y Personal", () => {
+  it("manager ve Panel, Hoteles, Personal y Revenue", () => {
     expect(adminSectionsFor("MANAGER").map((s) => s.href)).toEqual([
       "/admin",
       "/admin/hotels",
       "/admin/staff",
+      "/admin/analytics",
     ]);
   });
 
@@ -112,10 +113,11 @@ describe("adminSectionsFor", () => {
     expect(adminSectionsFor("GUEST")).toEqual([]);
   });
 
-  it("super admin ve Hoteles, Personal y Simulador", () => {
+  it("super admin ve Hoteles, Personal, Revenue y Simulador", () => {
     expect(adminSectionsFor("SUPER_ADMIN").map((s) => s.href)).toEqual([
       "/admin/hotels",
       "/admin/staff",
+      "/admin/analytics",
       "/admin/simulador",
     ]);
   });
