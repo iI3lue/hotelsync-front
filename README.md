@@ -20,9 +20,9 @@ Next.js 15 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 3 �
 
 ## Rutas
 
-**Público:** `/`, `/buscar`, `/hotels/[id]`, `/hotels/[id]/availability`, `/reservas/nueva`, `/mis-reservas`, `/cuenta/{crear,entrar,perfil,recuperar,restablecer}`.
+**Público:** `/`, `/buscar`, `/hotels/[id]`, `/hotels/[id]/availability`, `/reservas/nueva`, `/mis-reservas`, `/terminos`, `/privacidad`, `/cuenta/{crear,entrar,perfil,recuperar,restablecer}`.
 
-**Admin:** `/admin`, `/admin/analytics`, `/admin/hotels` (alta, detalle, inventario y habitaciones), `/admin/housekeeping`, `/admin/login`, `/admin/recepcion`, `/admin/simulador`, `/admin/staff`.
+**Admin:** `/admin`, `/admin/analytics`, `/admin/hotels` (alta, detalle, inventario y habitaciones), `/admin/housekeeping`, `/admin/login`, `/admin/recepcion`, `/admin/simulador`, `/admin/staff`. El panel identifica al personal por **nombre** (no por UUID) y muestra las fechas en formato local `es-CO`.
 
 ## BFF y rewrites
 
@@ -41,19 +41,28 @@ Next.js 15 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 3 �
 | `/api/simulator/reservations` | `CHANNEL_MANAGER_API_URL` (route handler, solo SUPER_ADMIN) |
 | `/api/warmup` | BFF interno: 11 `/health` en paralelo |
 
-Auth: `/api/auth/{login,register,google,callback,refresh,me,logout,providers,password/*}`. El middleware solo **inyecta** el Bearer en las llamadas de API; nunca rota tokens. La renovación ocurre en `/api/auth/refresh`, `/api/auth/me` y el retry del cliente (las `Set-Cookie` sobre `NextResponse.next()` se pierden en los rewrites).
+Auth: `/api/auth/{login,register,google,callback,refresh,me,logout,providers,password/*,consent}`. El middleware solo **inyecta** el Bearer en las llamadas de API; nunca rota tokens. La renovación ocurre en `/api/auth/refresh`, `/api/auth/me` y el retry del cliente (las `Set-Cookie` sobre `NextResponse.next()` se pierden en los rewrites).
 
 ## Guards
 
 - `src/middleware.ts`: exige sesión en `/admin` y redirige al panel por rol (`RECEPTIONIST → /admin/recepcion`, `HOUSEKEEPER → /admin/housekeeping`, `MANAGER`/`SUPER_ADMIN → /admin`).
 - `src/lib/routes.ts` (`isAllowedPathForRole`) y `src/lib/view-as.ts` (`adminSectionsFor`) repiten la matriz en cliente/servidor.
 - `WarmUp.tsx` despierta los 11 servicios al entrar: un solo request a `/api/warmup` dispara los 11 `/health` en paralelo desde el servidor (sin CORS y sin exponer `CHANNEL_MANAGER_API_URL`).
+- `ConsentGate.tsx` (montado en el layout): bloquea a las cuentas `GUEST` sin consentimiento registrado y ofrece aceptarlo.
 
 ## Mis reservas
 
 `/mis-reservas` lista las reservas de la cuenta (y las del email verificado) hasta el día de salida. Cada una muestra su estado de pago; si está pagada, se puede abrir el detalle del cobro. Si sigue impaga y el huésped es el dueño exacto (`booked_by_user_id`), aparece **Pagar ahora**.
 
 El dueño puede **cancelar** antes del check-in con confirmación explícita. La reserva no se borra: queda `cancelled`, desaparece de la lista y libera inventario. Si estaba paga, payment-service procesa un **reembolso simulado** y el pago queda como **Reembolsada** (`REFUNDED`); el flujo es asíncrono vía RabbitMQ y no requiere otra acción del huésped.
+
+En desarrollo, el formulario de pago muestra chips con tarjetas de prueba (`TEST_CARDS` en `src/lib/card.ts`).
+
+## Consentimiento, recordarme y fidelización
+
+- El registro exige aceptar el tratamiento de datos (Ley 1581) con enlaces a `/terminos` y `/privacidad`; el BFF reenvía el consentimiento a user-service (`/api/auth/consent`).
+- **Recordarme** (`hs_remember`) conserva la sesión entre visitas; el BFF ajusta la persistencia de las cookies según esa opción.
+- **Fidelización**: `LoyaltyCard` muestra nivel, progreso y saldo en la cuenta; `PointsEarned` (`useBookingPoints`) y `projectedPoints` muestran los puntos de cada reserva y los proyectados al pagar.
 
 ## Variables de entorno
 
