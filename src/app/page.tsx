@@ -36,14 +36,11 @@ function Collection({ hotels, city }: { hotels: Hotel[]; city?: string }) {
     );
   }
 
-  // Dos columnas con la segunda desplazada (ritmo editorial); en móvil
-  // conserva el orden original del catálogo.
+  // Dos columnas alineadas a la misma altura.
   return (
-    <div className="grid grid-cols-1 gap-x-16 gap-y-20 md:grid-cols-2 md:gap-y-28 md:pb-40 lg:gap-x-24 md:[&>*:nth-child(even)]:translate-y-40">
+    <div className="grid grid-cols-1 gap-x-16 gap-y-20 md:grid-cols-2 md:gap-y-28 lg:gap-x-24">
       {filtered.map((h, i) => (
-        <div key={h.hotel_id}>
-          <HotelCard hotel={h} index={i} />
-        </div>
+        <HotelCard key={h.hotel_id} hotel={h} index={i} />
       ))}
     </div>
   );
