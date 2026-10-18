@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { auth0Config } from "@/lib/auth-session";
 import CreateForm from "./form";
 
 export const metadata: Metadata = {
@@ -11,5 +12,5 @@ export default function CreatePage({
 }: {
   searchParams: Promise<{ returnTo?: string }>;
 }) {
-  return <CreateForm params={searchParams} />;
+  return <CreateForm params={searchParams} googleEnabled={auth0Config() !== null} />;
 }

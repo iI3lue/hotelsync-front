@@ -39,8 +39,10 @@ function AuthAmbient({ mode }: { mode: "login" | "register" }) {
 /* ─── Login form ────────────────────────────────────────────── */
 export default function EnterForm({
   params,
+  googleEnabled,
 }: {
   params: Promise<{ returnTo?: string; error?: string }>;
+  googleEnabled: boolean;
 }) {
   const router = useRouter();
   const [returnTo, setReturnTo] = useState("/mis-reservas");
@@ -126,16 +128,6 @@ export default function EnterForm({
 
           {/* Card */}
           <div className="rounded-2.5xl border border-brand-navy/6 bg-white p-8 shadow-card dark:border-white/6 dark:bg-brand-navy-800">
-            {/* Google */}
-            <GoogleButton returnTo={returnTo} />
-
-            {/* Divider */}
-            <div className="my-6 flex items-center gap-3">
-              <div className="flex-1 border-t border-gray-200 dark:border-white/8" />
-              <span className="text-xs font-medium text-gray-400">o continuá con tu correo</span>
-              <div className="flex-1 border-t border-gray-200 dark:border-white/8" />
-            </div>
-
             {/* Error */}
             {error && (
               <div className="animate-notice-in mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-800/40 dark:bg-red-950/20">
@@ -239,6 +231,18 @@ export default function EnterForm({
                 ) : "Entrar a mi cuenta"}
               </button>
             </form>
+
+            {/* Google — método alternativo al pie */}
+            {googleEnabled && (
+              <>
+                <div className="my-6 flex items-center gap-3">
+                  <div className="flex-1 border-t border-gray-200 dark:border-white/8" />
+                  <span className="text-xs font-medium text-gray-400">o ingresá con Google</span>
+                  <div className="flex-1 border-t border-gray-200 dark:border-white/8" />
+                </div>
+                <GoogleButton returnTo={returnTo} />
+              </>
+            )}
           </div>
         </div>
       </div>
