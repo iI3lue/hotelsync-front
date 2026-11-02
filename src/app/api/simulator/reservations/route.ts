@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorJson } from "@/lib/auth-session";
+import { isGatewayServiceEnabled } from "@/lib/gateway";
 import { getSessionScope } from "@/lib/server-session";
 
 const CHANNEL_MANAGER_API =
   process.env.CHANNEL_MANAGER_API_URL || "http://localhost:3008/v1";
+
+const GATEWAY_URL = (process.env.GATEWAY_URL || "").replace(/\/+$/, "");
+const GATEWAY_SECRET = process.env.GATEWAY_SHARED_SECRET;
+const USE_GATEWAY = Boolean(
+  GATEWAY_URL &&
+    GATEWAY_SECRET &&
+    isGatewayServiceEnabled(process.env.GATEWAY_SERVICES, "channel-manager")
+);
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -64,34 +73,38 @@ export async function POST(request: NextRequest) {
       ? body.external_id.trim().slice(0, 100)
       : `SIM-${Date.now().toString(36).toUpperCase()}`;
 
+  const target = USE_GATEWAY
+    ? `${GATEWAY_URL}/channel-manager/simulado/reservations`
+    : `${CHANNEL_MANAGER_API}/simulator/simulado/reservations`;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-provider-key": providerKey,
+  };
+  if (USE_GATEWAY && GATEWAY_SECRET) headers["x-gateway-secret"] = GATEWAY_SECRET;
+
   let upstream: Response;
   try {
-    upstream = await fetch(
-      `${CHANNEL_MANAGER_API}/simulator/simulado/reservations`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-provider-key": providerKey,
+    upstream = await fetch(target, {
+      method: "POST",
+      headers,
+      // Los backends en plan free despiertan lento: se corta a los 45s
+      // para devolver 503 en vez de colgar el navegador (timeout Vercel).
+      signal: AbortSignal.timeout(45_000),
+      body: JSON.stringify({
+        external_id,
+        hotel_id,
+        room_type_id,
+        check_in,
+        check_out,
+        total_amount,
+        guest: {
+          name: guest.name.trim(),
+          email: guest.email.trim(),
+          phone: guest.phone.trim(),
         },
-        // Los backends en plan free despiertan lento: se corta a los 45s
-        // para devolver 503 en vez de colgar el navegador (timeout Vercel).
-        signal: AbortSignal.timeout(45_000),
-        body: JSON.stringify({
-          external_id,
-          hotel_id,
-          room_type_id,
-          check_in,
-          check_out,
-          total_amount,
-          guest: {
-            name: guest.name.trim(),
-            email: guest.email.trim(),
-            phone: guest.phone.trim(),
-          },
-        }),
-      }
-    );
+      }),
+    });
   } catch {
     return errorJson("Channel manager unavailable (timeout)", 503);
   }
