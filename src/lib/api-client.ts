@@ -11,6 +11,7 @@ import { authHeader } from "./auth-client";
 import {
   backoffDelay,
   isRetryableError,
+  isRetryableStatus,
   timeoutSignal,
 } from "./timeout-signal";
 
@@ -26,6 +27,8 @@ import {
  *   por rango y reserva, que despiertan al R&A/booking dormidos).
  * - 1 reintento con backoff+jitter en GETs ante fallo de red/timeout.
  *   POST/PUT nunca se reintentan (evita doble reserva/cargo).
+ * - GETs además reintentan 502/503/504 (el edge de Render responde 502
+ *   mientras la instancia free arranca): 3 intentos con 1s/3s/7s.
  * - `timeoutSignal` con fallback para iPhones viejos sin
  *   `AbortSignal.timeout` (Baseline 2024).
  */
@@ -86,6 +89,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/** Intentos extra para 502/503/504 (solo GET/HEAD). */
+const MAX_STATUS_RETRIES = 3;
+const STATUS_RETRY_DELAYS_MS = [1_000, 3_000, 7_000];
+
+function statusRetryDelay(attempt: number, retryAfter: string | null): number {
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds > 0) return Math.min(seconds * 1000, 15_000);
+  return STATUS_RETRY_DELAYS_MS[Math.min(attempt, STATUS_RETRY_DELAYS_MS.length - 1)];
+}
+
 async function fetchWithSession(
   url: string,
   init: Omit<RequestInit, "signal"> = {},
@@ -94,22 +107,40 @@ async function fetchWithSession(
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   // Solo GET/HEAD se reintentan: un POST reintentado duplicarÃ­a la
   // operaciÃ³n (doble reserva, doble cargo) si el primero sÃ­ llegÃ³.
-  const maxRetries = opts.retries ?? (isIdempotent(init) ? 1 : 0);
-  let attempt = 0;
+  const idempotent = isIdempotent(init);
+  const maxRetries = opts.retries ?? (idempotent ? 1 : 0);
+  let netAttempt = 0;
+  let statusAttempt = 0;
+  let refreshed = false;
   for (;;) {
     const send = () =>
       fetch(url, { ...init, signal: timeoutSignal(timeoutMs) });
+    let res: Response;
     try {
-      const first = await send();
-      if (first.status !== 401 || !(await refreshSession())) return first;
+      res = await send();
+    } catch (err) {
+      if (netAttempt >= maxRetries || !isRetryableError(err)) throw err;
+      netAttempt += 1;
+      await sleep(backoffDelay(netAttempt - 1));
+      continue;
+    }
+
+    if (res.status === 401 && !refreshed) {
+      refreshed = true;
       // A retry is safe: authenticated routes reject a missing/expired Bearer
       // before running their controller, so the original operation did not run.
-      return send();
-    } catch (err) {
-      if (attempt >= maxRetries || !isRetryableError(err)) throw err;
-      attempt += 1;
-      await sleep(backoffDelay(attempt - 1));
+      if (await refreshSession()) continue;
+      return res;
     }
+
+    if (idempotent && statusAttempt < MAX_STATUS_RETRIES && isRetryableStatus(res.status)) {
+      statusAttempt += 1;
+      res.body?.cancel().catch(() => undefined);
+      await sleep(statusRetryDelay(statusAttempt - 1, res.headers.get("retry-after")));
+      continue;
+    }
+
+    return res;
   }
 }
 

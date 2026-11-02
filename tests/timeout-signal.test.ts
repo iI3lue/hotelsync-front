@@ -1,4 +1,8 @@
-import { backoffDelay, timeoutSignal } from "@/lib/timeout-signal";
+import {
+  backoffDelay,
+  isRetryableStatus,
+  timeoutSignal,
+} from "@/lib/timeout-signal";
 
 describe("timeoutSignal", () => {
   it("usa AbortSignal.timeout cuando existe", () => {
@@ -52,6 +56,20 @@ describe("backoffDelay", () => {
       expect(d0).toBeLessThan(600);
       expect(d1).toBeGreaterThanOrEqual(800);
       expect(d1).toBeLessThan(1000);
+    }
+  });
+});
+
+describe("isRetryableStatus", () => {
+  it("marca los status de borde transitorios", () => {
+    expect(isRetryableStatus(502)).toBe(true);
+    expect(isRetryableStatus(503)).toBe(true);
+    expect(isRetryableStatus(504)).toBe(true);
+  });
+
+  it("no marca errores de negocio ni de red ya resueltos", () => {
+    for (const status of [200, 400, 401, 403, 404, 409, 422, 500]) {
+      expect(isRetryableStatus(status)).toBe(false);
     }
   });
 });

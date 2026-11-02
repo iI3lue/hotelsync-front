@@ -47,6 +47,15 @@ export function isRetryableError(err: unknown): boolean {
   return false;
 }
 
+/**
+ * 502/503/504 del borde mientras un servicio free arranca (Render responde
+ * 502 al instante si la instancia duerme). Es transitorio: el request
+ * original no llegó a ejecutarse, así que reintentar un GET es seguro.
+ */
+export function isRetryableStatus(status: number): boolean {
+  return status === 502 || status === 503 || status === 504;
+}
+
 /** Espera con jitter para no sincronizar reintentos en red mala. */
 export function backoffDelay(attempt: number): number {
   const base = 400 * 2 ** attempt;
