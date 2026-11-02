@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isGatewayServiceEnabled, resolveClientIp } from "./lib/gateway";
 
 /**
  * BFF mínimo: los Client Components pegan a /api/* (mismo origen, con
@@ -90,6 +91,16 @@ export function middleware(request: NextRequest) {
 
   // Las llamadas a la API solo reciben el Bearer inyectado, nunca redirect.
   if (isApiPath) {
+    const service = pathname.split("/")[2] ?? "";
+    const gatewaySecret = process.env.GATEWAY_SHARED_SECRET;
+    if (
+      gatewaySecret &&
+      isGatewayServiceEnabled(process.env.GATEWAY_SERVICES, service)
+    ) {
+      headers.set("x-gateway-secret", gatewaySecret);
+      const clientIp = resolveClientIp(request.headers);
+      if (clientIp) headers.set("x-client-ip", clientIp);
+    }
     return NextResponse.next({ request: { headers } });
   }
 
