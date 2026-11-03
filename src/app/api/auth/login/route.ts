@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { USER_API, errorJson, setSessionCookies } from "@/lib/auth-session";
+import {
+  USER_API,
+  errorJson,
+  setSessionCookies,
+  userApiHeaders,
+} from "@/lib/auth-session";
 
 export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => null)) as {
@@ -10,7 +15,7 @@ export async function POST(request: NextRequest) {
   // `remember` es una decisión del BFF: no viaja al user-service.
   const upstream = await fetch(`${USER_API}/auth/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: userApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       email: body?.email,
       password: body?.password,

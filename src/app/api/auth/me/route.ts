@@ -5,11 +5,12 @@ import {
   errorJson,
   readRemember,
   setSessionCookies,
+  userApiHeaders,
 } from "@/lib/auth-session";
 
 async function fetchMe(access: string): Promise<Response> {
   return fetch(`${USER_API}/users/me`, {
-    headers: { Authorization: `Bearer ${access}` },
+    headers: userApiHeaders({ Authorization: `Bearer ${access}` }),
   });
 }
 
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
   if (upstream.status === 401 && refresh) {
     const rotated = await fetch(`${USER_API}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: userApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ refresh_token: refresh }),
     });
     const rotatedData = (await rotated.json().catch(() => ({}))) as {
@@ -92,10 +93,10 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const upstream = await fetch(`${USER_API}/users/me`, {
     method: "PATCH",
-    headers: {
+    headers: userApiHeaders({
       "Content-Type": "application/json",
       Authorization: `Bearer ${access}`,
-    },
+    }),
     body: JSON.stringify(body),
   });
   const data = await upstream.json().catch(() => ({}));
@@ -121,10 +122,10 @@ export async function DELETE(request: NextRequest) {
   try {
     upstream = await fetch(`${USER_API}/users/me`, {
       method: "DELETE",
-      headers: {
+      headers: userApiHeaders({
         "Content-Type": "application/json",
         Authorization: `Bearer ${access}`,
-      },
+      }),
       body: JSON.stringify(body),
     });
   } catch {

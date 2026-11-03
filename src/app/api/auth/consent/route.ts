@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { USER_API, errorJson } from "@/lib/auth-session";
+import { USER_API, errorJson, userApiHeaders } from "@/lib/auth-session";
 
 /**
  * Aceptación del tratamiento de datos. Reenvía al user-service con el
@@ -11,10 +11,10 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const upstream = await fetch(`${USER_API}/users/me/consent`, {
     method: "POST",
-    headers: {
+    headers: userApiHeaders({
       "Content-Type": "application/json",
       Authorization: `Bearer ${access}`,
-    },
+    }),
     body: JSON.stringify(body),
   });
   const data = await upstream.json().catch(() => ({}));

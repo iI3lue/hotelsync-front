@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { USER_API, errorJson } from "@/lib/auth-session";
+import { USER_API, errorJson, userApiHeaders } from "@/lib/auth-session";
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const upstream = await fetch(`${USER_API}/auth/password/code`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: userApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body ?? {}),
   });
   const data = await upstream.json().catch(() => ({}));

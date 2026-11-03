@@ -5,6 +5,7 @@ import {
   auth0Config,
   errorJson,
   setSessionCookies,
+  userApiHeaders,
 } from "@/lib/auth-session";
 
 function safeReturnTo(state: string | null): string {
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
 
   const federated = await fetch(`${USER_API}/auth/federated`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: userApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       provider: "auth0",
       id_token: tokens.id_token,

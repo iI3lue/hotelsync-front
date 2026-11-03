@@ -4,6 +4,7 @@ import {
   appBaseUrl,
   auth0Config,
   clearSessionCookies,
+  userApiHeaders,
 } from "@/lib/auth-session";
 
 export async function POST(request: NextRequest) {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
   if (refresh) {
     await fetch(`${USER_API}/auth/logout`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: userApiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ refresh_token: refresh }),
     }).catch(() => undefined);
   }

@@ -54,7 +54,16 @@ const API_TIMEOUT_MS = Number(process.env.API_FETCH_TIMEOUT_MS) || 8000;
  * la espera y puede pasarse del límite de la función; el caller degrada.
  */
 function timedFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(url, { ...init, signal: timeoutSignal(API_TIMEOUT_MS) });
+  const headers = new Headers(init.headers);
+  const secret = process.env.GATEWAY_SHARED_SECRET;
+  if (secret && !headers.has("x-gateway-secret")) {
+    headers.set("x-gateway-secret", secret);
+  }
+  return fetch(url, {
+    ...init,
+    headers,
+    signal: timeoutSignal(API_TIMEOUT_MS),
+  });
 }
 
 export interface Hotel {

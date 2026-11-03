@@ -5,6 +5,7 @@ import {
   errorJson,
   readRemember,
   setSessionCookies,
+  userApiHeaders,
 } from "@/lib/auth-session";
 
 /**
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
 
   const upstream = await fetch(`${USER_API}/auth/refresh`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: userApiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ refresh_token: refresh }),
   });
   const data = await upstream.json().catch(() => ({}));
