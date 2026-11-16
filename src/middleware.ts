@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isGatewayServiceEnabled, resolveClientIp } from "./lib/gateway";
+import { resolveClientIp } from "./lib/gateway";
 
 /**
  * BFF mínimo: los Client Components pegan a /api/* (mismo origen, con
@@ -91,12 +91,12 @@ export function middleware(request: NextRequest) {
 
   // Las llamadas a la API solo reciben el Bearer inyectado, nunca redirect.
   if (isApiPath) {
-    const service = pathname.split("/")[2] ?? "";
+    // El secreto va SIEMPRE que esté configurado, no solo para los servicios
+    // enrutados por el gateway: los microservicios exigen `x-gateway-secret`
+    // también cuando el rewrite pega directo a ellos (GATEWAY_SERVICES solo
+    // decide el ruteo). Atarlo al ruteo rompía /api/users/staff con 401.
     const gatewaySecret = process.env.GATEWAY_SHARED_SECRET;
-    if (
-      gatewaySecret &&
-      isGatewayServiceEnabled(process.env.GATEWAY_SERVICES, service)
-    ) {
+    if (gatewaySecret) {
       headers.set("x-gateway-secret", gatewaySecret);
       const clientIp = resolveClientIp(request.headers);
       if (clientIp) headers.set("x-client-ip", clientIp);
