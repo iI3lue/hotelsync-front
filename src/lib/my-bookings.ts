@@ -45,6 +45,37 @@ export function isPaidBooking(
 }
 
 /**
+ * Reservas cuyo cobro online hay que confirmar contra payment-service al
+ * cargar la lista: el evento `payment.completed` puede no haber llegado
+ * todavía a booking, y el listado no debe mostrar "Pago pendiente" ni
+ * "Pagar ahora" si el cobro ya se hizo.
+ */
+export function needsPaymentReconciliation(
+  booking: Pick<Booking, "status" | "payment_status" | "payment_method_preference">
+): boolean {
+  if (booking.status === "cancelled") return false;
+  if (booking.payment_status === "PAID" || booking.payment_status === "REFUNDED") {
+    return false;
+  }
+  return booking.payment_method_preference !== "RECEPTION";
+}
+
+/** Aplica los estados de cobro confirmados por payment-service al listado. */
+export function applyPaymentStatuses<
+  T extends Pick<Booking, "booking_id" | "payment_status" | "paid_at">
+>(bookings: T[], statuses: ReadonlyMap<string, "PAID">): T[] {
+  if (statuses.size === 0) return bookings;
+  return bookings.map((booking) => {
+    if (!statuses.has(booking.booking_id)) return booking;
+    return {
+      ...booking,
+      payment_status: "PAID" as const,
+      paid_at: booking.paid_at ?? new Date().toISOString(),
+    };
+  });
+}
+
+/**
  * Sólo el dueño exacto (`booked_by_user_id`) puede cancelar desde la web,
  * antes del check-in y mientras la reserva siga pendiente o confirmada.
  * Las pagadas también se cancelan (el reembolso es simulado).

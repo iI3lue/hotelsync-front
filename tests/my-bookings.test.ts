@@ -1,8 +1,10 @@
 import {
+  applyPaymentStatuses,
   canCancelBooking,
   isVisibleMyBooking,
   localIsoDate,
   myBookingBadgeKey,
+  needsPaymentReconciliation,
   visibleMyBookings,
 } from "@/lib/my-bookings";
 
@@ -145,5 +147,70 @@ describe("myBookingBadgeKey", () => {
     expect(
       myBookingBadgeKey({ status: "pending", payment_status: "PENDING" })
     ).toBe("pending");
+  });
+});
+
+describe("needsPaymentReconciliation", () => {
+  const onlinePending = {
+    status: "confirmed" as const,
+    payment_status: "PENDING" as const,
+    payment_method_preference: "ONLINE" as const,
+  };
+
+  it("reconcilia reservas online sin cobro confirmado", () => {
+    expect(needsPaymentReconciliation(onlinePending)).toBe(true);
+    expect(
+      needsPaymentReconciliation({ ...onlinePending, status: "pending" })
+    ).toBe(true);
+    expect(
+      needsPaymentReconciliation({ ...onlinePending, payment_status: undefined })
+    ).toBe(true);
+  });
+
+  it("no reconcilia pagadas, reembolsadas, canceladas ni de recepción", () => {
+    expect(
+      needsPaymentReconciliation({ ...onlinePending, payment_status: "PAID" })
+    ).toBe(false);
+    expect(
+      needsPaymentReconciliation({
+        ...onlinePending,
+        payment_status: "REFUNDED",
+      })
+    ).toBe(false);
+    expect(
+      needsPaymentReconciliation({ ...onlinePending, status: "cancelled" })
+    ).toBe(false);
+    expect(
+      needsPaymentReconciliation({
+        ...onlinePending,
+        payment_method_preference: "RECEPTION",
+      })
+    ).toBe(false);
+  });
+});
+
+describe("applyPaymentStatuses", () => {
+  const list = [
+    {
+      booking_id: "a",
+      payment_status: "PENDING" as const,
+      paid_at: null as string | null,
+    },
+    {
+      booking_id: "b",
+      payment_status: "PENDING" as const,
+      paid_at: null as string | null,
+    },
+  ];
+
+  it("marca PAID solo las reservas confirmadas por payment-service", () => {
+    const result = applyPaymentStatuses(list, new Map([["a", "PAID" as const]]));
+    expect(result[0].payment_status).toBe("PAID");
+    expect(result[0].paid_at).toBeTruthy();
+    expect(result[1]).toEqual(list[1]);
+  });
+
+  it("sin estados confirmados devuelve la misma lista", () => {
+    expect(applyPaymentStatuses(list, new Map())).toBe(list);
   });
 });

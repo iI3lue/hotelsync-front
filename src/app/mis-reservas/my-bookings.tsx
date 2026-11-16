@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Booking } from "@/lib/api";
-import { fetchMyBookings } from "@/lib/api-client";
+import { fetchMyBookings, fetchPaymentStatus } from "@/lib/api-client";
 import { me } from "@/lib/auth-client";
 import { formatDate, stayNights } from "@/lib/format";
 import {
+  applyPaymentStatuses,
   canCancelBooking,
   isPaidBooking,
   isVisibleMyBooking,
   myBookingBadgeKey,
+  needsPaymentReconciliation,
 } from "@/lib/my-bookings";
 import Money from "@/components/Money";
 import { canPayOnline } from "@/lib/payment-eligibility";
@@ -63,6 +65,37 @@ export default function MyBookings() {
       .filter((b) => isVisibleMyBooking(b));
   }
 
+  /**
+   * El cobro vive en payment-service y booking se entera por evento. Si el
+   * evento no llegó (o llegó tarde), el listado mostraría "Pago pendiente" y
+   * "Pagar ahora" sobre una reserva ya cobrada. Se reconcilia consultando el
+   * estado real del cobro por cada reserva online sin pagar.
+   */
+  async function reconcilePayments(list: Booking[]): Promise<Booking[]> {
+    const pending = list.filter((b) => needsPaymentReconciliation(b));
+    if (pending.length === 0) return list;
+
+    const results = await Promise.allSettled(
+      pending.map((b) => fetchPaymentStatus(b.booking_id))
+    );
+    const paid = new Map<string, "PAID">();
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value.payment_status === "PAID") {
+        paid.set(pending[index].booking_id, "PAID");
+      }
+    });
+    return applyPaymentStatuses(list, paid);
+  }
+
+  function loadBookings(): void {
+    fetchMyBookings()
+      .then((list) => reconcilePayments(list))
+      .then((list) => setBookings(applyLocalChanges(list)))
+      .catch((err: unknown) =>
+        setError(err instanceof Error ? err.message : "No se pudieron cargar tus reservas")
+      );
+  }
+
   useEffect(() => {
     me().then((profile) => {
       if (!profile) {
@@ -70,11 +103,7 @@ export default function MyBookings() {
         return;
       }
       setUserId(profile.user_id);
-      fetchMyBookings()
-        .then((list) => setBookings(applyLocalChanges(list)))
-        .catch((err: unknown) =>
-          setError(err instanceof Error ? err.message : "No se pudieron cargar tus reservas")
-        );
+      loadBookings();
     });
     // El set de pagos locales es estable durante la vida del componente.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -98,11 +127,7 @@ export default function MyBookings() {
     setPaying(null);
     // La confirmación llega por evento (`payment.completed`); reconciliamos luego
     // sin perder el estado pagado si el evento todavía no llegó.
-    window.setTimeout(() => {
-      fetchMyBookings()
-        .then((list) => setBookings(applyLocalChanges(list)))
-        .catch(() => {});
-    }, 2500);
+    window.setTimeout(loadBookings, 2500);
   }
 
   function handleCancelled(bookingId: string) {
