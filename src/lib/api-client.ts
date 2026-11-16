@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import type {
   Availability,
@@ -156,6 +156,20 @@ export async function clientFetch<T>(
     },
     opts
   );
+  if (!res.ok) throw await toApiError(res);
+  return res.json() as Promise<T>;
+}
+
+/**
+ * GET anónimo (sin Bearer) con la misma política de reintentos de borde que
+ * `clientFetch`. Lo usan los widgets públicos (disponibilidad) que antes
+ * hacían `fetch` pelado y morían con el primer 429/502 transitorio.
+ */
+export async function fetchPublicJson<T>(
+  url: string,
+  opts: RequestOptions = {}
+): Promise<T> {
+  const res = await fetchWithSession(url, {}, opts);
   if (!res.ok) throw await toApiError(res);
   return res.json() as Promise<T>;
 }

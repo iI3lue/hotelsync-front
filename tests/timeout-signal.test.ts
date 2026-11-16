@@ -62,6 +62,7 @@ describe("backoffDelay", () => {
 
 describe("isRetryableStatus", () => {
   it("marca los status de borde transitorios", () => {
+    expect(isRetryableStatus(429)).toBe(true);
     expect(isRetryableStatus(502)).toBe(true);
     expect(isRetryableStatus(503)).toBe(true);
     expect(isRetryableStatus(504)).toBe(true);

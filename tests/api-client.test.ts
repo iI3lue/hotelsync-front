@@ -1,4 +1,4 @@
-import { clientFetch, clientPost } from "@/lib/api-client";
+import { clientFetch, clientPost, fetchPublicJson } from "@/lib/api-client";
 
 jest.mock("@/lib/auth-client", () => ({
   authHeader: () => ({ Authorization: "Bearer test-token" }),
@@ -24,6 +24,25 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+});
+
+describe("fetchPublicJson", () => {
+  it("reintenta un 429 del borde y no manda Bearer", async () => {
+    fetchMock
+      .mockResolvedValueOnce(fakeResponse(429, { error: "TooManyRequests" }))
+      .mockResolvedValueOnce(fakeResponse(200, { available: 3 }));
+
+    const promise = fetchPublicJson(
+      "/api/rate/availability?room_type_id=r1&date=2026-11-20"
+    );
+    await jest.advanceTimersByTimeAsync(1_000);
+
+    await expect(promise).resolves.toEqual({ available: 3 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    const headers = (init.headers ?? {}) as Record<string, string>;
+    expect(headers.Authorization).toBeUndefined();
+  });
 });
 
 describe("reintento ante 502/503/504 del borde", () => {

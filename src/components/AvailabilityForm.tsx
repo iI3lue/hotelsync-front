@@ -13,7 +13,7 @@ import Money from "@/components/Money";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import Spinner from "@/components/Spinner";
 import { me, type AuthProfile } from "@/lib/auth-client";
-import { updateRoomType } from "@/lib/api-client";
+import { updateRoomType, fetchPublicJson, LONG_TIMEOUT_MS } from "@/lib/api-client";
 import { AmenityList } from "@/components/ui/Amenity";
 import Arrow from "@/components/ui/Arrow";
 
@@ -26,11 +26,10 @@ interface AvailabilityFormProps {
   search?: SearchState;
 }
 
-const fetcher = async (url: string): Promise<Availability> => {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("No se pudo consultar la disponibilidad");
-  return res.json();
-};
+// Reintenta 429/502/503/504 del borde (servicio free dormido o saturado por
+// ráfagas del calendario) antes de mostrar el error al huésped.
+const fetcher = (url: string): Promise<Availability> =>
+  fetchPublicJson<Availability>(url, { timeoutMs: LONG_TIMEOUT_MS });
 
 const ROOM_PRESET_IMAGES = [
   {

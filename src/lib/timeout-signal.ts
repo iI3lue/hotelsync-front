@@ -49,11 +49,12 @@ export function isRetryableError(err: unknown): boolean {
 
 /**
  * 502/503/504 del borde mientras un servicio free arranca (Render responde
- * 502 al instante si la instancia duerme). Es transitorio: el request
- * original no llegó a ejecutarse, así que reintentar un GET es seguro.
+ * 502 al instante si la instancia duerme) y 429 del borde/proxy cuando se
+ * satura por ráfagas. Son transitorios: el request original no llegó a
+ * ejecutarse, así que reintentar un GET es seguro.
  */
 export function isRetryableStatus(status: number): boolean {
-  return status === 502 || status === 503 || status === 504;
+  return status === 429 || status === 502 || status === 503 || status === 504;
 }
 
 /** Espera con jitter para no sincronizar reintentos en red mala. */
